@@ -1,4 +1,0 @@
-.env
-venv/Lib/site-packages/werkzeug/__pycache__
-database
-naijacart-backend/naijacart.db

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>Verify Email | NaijaCart</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: #f4f7f6;
+        font-family: Arial, sans-serif;
+    }
+
+    .verification-card {
+        width: 100%;
+        max-width: 430px;
+        background: white;
+        padding: 40px 30px;
+        border-radius: 18px;
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+
+    .logo {
+        font-size: 30px;
+        font-weight: 800;
+        color: #006b57;
+        margin-bottom: 25px;
+    }
+
+    .logo span {
+        color: #111;
+    }
+
+    h1 {
+        margin: 0 0 12px;
+        color: #111;
+        font-size: 27px;
+    }
+
+    .description {
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 25px;
+    }
+
+    .email {
+        font-weight: bold;
+        color: #006b57;
+        word-break: break-word;
+    }
+
+    .code-input {
+        width: 100%;
+        padding: 16px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        font-size: 25px;
+        text-align: center;
+        letter-spacing: 8px;
+        outline: none;
+        margin-bottom: 18px;
+    }
+
+    .code-input:focus {
+        border-color: #006b57;
+        box-shadow: 0 0 0 3px rgba(0, 107, 87, 0.1);
+    }
+
+    .verify-button {
+        width: 100%;
+        border: none;
+        background: #006b57;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .verify-button:hover {
+        background: #005544;
+    }
+
+    .resend {
+        margin-top: 20px;
+    }
+
+    .resend button {
+        border: none;
+        background: none;
+        color: #006b57;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .back {
+        display: inline-block;
+        margin-top: 15px;
+        color: #666;
+        text-decoration: none;
+        font-size: 14px;
+    }
+
+    .flash {
+        background: #fff4e5;
+        color: #8a5200;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+</style>
+
+
+</head>
+
+<body>
+
+
+<div class="verification-card">
+
+    <div class="logo">
+        Naija<span>Cart</span>
+    </div>
+
+    <h1>Verify Your Email</h1>
+
+    <p class="description">
+        We sent a 6-digit verification code to:
+    </p>
+
+    <p class="email">
+        {{ email }}
+    </p>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div class="flash">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form
+        method="POST"
+        action="{{ url_for('verify_email') }}"
+    >
+
+        <input
+            class="code-input"
+            type="text"
+            name="code"
+            placeholder="000000"
+            maxlength="6"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            required
+        >
+
+        <button
+            class="verify-button"
+            type="submit"
+        >
+            Verify Email
+        </button>
+
+    </form>
+
+    <div class="resend">
+
+        <form
+            method="POST"
+            action="{{ url_for('resend_verification') }}"
+        >
+
+            <button type="submit">
+                Didn't receive the code? Resend
+            </button>
+
+        </form>
+
+    </div>
+
+    <a
+        class="back"
+        href="{{ url_for('home') }}"
+    >
+        Back to NaijaCart
+    </a>
+
+</div>
+
+
+</body>
+</html>

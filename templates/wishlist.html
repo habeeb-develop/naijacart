@@ -1,0 +1,225 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>My Wishlist | NaijaCart</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/wishlist.css') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+<header class="wishlist-header">
+
+    <div class="header-inner">
+
+        <a href="{{ url_for('home') }}" class="logo">
+            <span>N</span>
+
+            <div>
+                <strong>NaijaCart</strong>
+                <small>Everything Nigerian</small>
+            </div>
+        </a>
+
+        <a href="{{ url_for('home') }}" class="back-button">
+            ← Continue Shopping
+        </a>
+
+    </div>
+
+</header>
+
+
+<main class="wishlist-page">
+
+    <div class="wishlist-container">
+
+        <div class="page-heading">
+
+            <div>
+                <span class="eyebrow">MY ACCOUNT</span>
+
+                <h1>My Wishlist</h1>
+
+                <p>
+                    Save products you love and come back to them anytime.
+                </p>
+            </div>
+
+            <div class="wishlist-total">
+                {{ wishlist|length if wishlist else 0 }} Items
+            </div>
+
+        </div>
+
+
+        {% if wishlist %}
+
+        <div class="wishlist-grid">
+
+            {% for item in wishlist %}
+
+            <article class="wishlist-card">
+
+                <!-- PRODUCT IMAGE -->
+                <div class="product-image">
+
+                    {% if item['image'] %}
+
+                    <img
+                        src="{{ item['image'] }}"
+                        alt="{{ item['name'] }}"
+                        loading="lazy"
+                    >
+
+                    {% else %}
+
+                    <div class="placeholder">
+                        🛍️
+                    </div>
+
+                    {% endif %}
+
+
+                    <!-- SAVED HEART -->
+                    <div class="saved-heart" aria-label="Saved to wishlist">
+                        ♥
+                    </div>
+
+                    <span class="saved">
+                        ♥ Saved
+                    </span>
+
+                </div>
+
+
+                <!-- PRODUCT INFORMATION -->
+                <div class="product-info">
+
+                    <span class="category">
+                        {{ item['category']|title }}
+                    </span>
+
+                    <h2>
+                        {{ item['name'] }}
+                    </h2>
+
+
+                    <div class="rating">
+                        <span>★★★★★</span>
+                        <small>(0 reviews)</small>
+                    </div>
+
+
+                    <div class="price">
+                        ₦{{ "{:,.0f}".format(item['price']) }}
+                    </div>
+
+
+                    <!-- ACTION BUTTONS -->
+                    <div class="actions">
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('add_to_cart', product_id=item['id']) }}"
+                        >
+
+                            <button
+                                type="submit"
+                                class="cart-button"
+                            >
+                                🛒 Add to Cart
+                            </button>
+
+                        </form>
+
+
+                        <form
+                            method="POST"
+                            action="{{ url_for('remove_from_wishlist', product_id=item['id']) }}"
+                        >
+
+                            <button
+                                type="submit"
+                                class="remove-button"
+                            >
+                                ♥ Remove
+                            </button>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+        </div>
+
+
+        <!-- CONTINUE SHOPPING -->
+        <div class="wishlist-footer-action">
+
+            <a href="{{ url_for('home') }}" class="shop-button">
+                ← Continue Shopping
+            </a>
+
+        </div>
+
+
+        {% else %}
+
+
+        <!-- EMPTY WISHLIST -->
+        <div class="empty-wishlist">
+
+            <div class="heart-icon">
+                ♡
+            </div>
+
+            <h2>
+                Your wishlist is empty
+            </h2>
+
+            <p>
+                You haven't saved any products yet.
+                Browse NaijaCart and tap the heart to save your favourites.
+            </p>
+
+            <a href="{{ url_for('home') }}" class="shop-button">
+                Browse Products →
+            </a>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</main>
+
+
+<footer>
+    <p>
+        © 2026 NaijaCart · Made for Nigerians 🇳🇬
+    </p>
+</footer>
+
+
+</body>
+</html>
+

@@ -1,0 +1,782 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Checkout | NaijaCart</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/checkout.css') }}"
+    >
+
+    <!-- Paystack -->
+    <script src="https://js.paystack.co/v1/inline.js"></script>
+</head>
+
+<body>
+
+    <!-- =========================
+         HEADER
+    ========================== -->
+    <header class="checkout-header">
+
+        <div class="header-container">
+
+            <a href="{{ url_for('home') }}" class="logo">
+                <span class="logo-icon">🇳🇬</span>
+                <span>Naija<span>Cart</span></span>
+            </a>
+
+            <a href="{{ url_for('home') }}" class="back-link">
+                ← Continue Shopping
+            </a>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================
+         MAIN CHECKOUT
+    ========================== -->
+    <main class="checkout-container">
+
+        <div class="checkout-title">
+
+            <span class="checkout-icon">🛒</span>
+
+            <div>
+                <h1>Checkout</h1>
+                <p>Complete your order securely.</p>
+            </div>
+
+        </div>
+
+
+        <div class="checkout-grid">
+
+
+            <!-- =========================
+                 CUSTOMER INFORMATION
+            ========================== -->
+            <section class="checkout-card">
+
+                <div class="card-heading">
+                    <div class="heading-number">1</div>
+
+                    <div>
+                        <h2>Delivery Information</h2>
+                        <p>Where should we deliver your order?</p>
+                    </div>
+                </div>
+
+
+                <form
+                    id="checkout-form"
+                    onsubmit="startPayment(event)"
+                >
+
+                    <div class="form-row">
+
+                        <div class="form-group">
+
+                            <label for="first_name">
+                                First Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="first_name"
+                                name="first_name"
+                                placeholder="Enter your first name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="last_name">
+                                Last Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="last_name"
+                                name="last_name"
+                                placeholder="Enter your last name"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="email">
+                            Email Address
+                        </label>
+
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value="{{ session.get('email', '') }}"
+                            placeholder="you@example.com"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="phone">
+                            Phone Number
+                        </label>
+
+                        <input
+                            type="tel"
+                            id="phone"
+                            name="phone"
+                            placeholder="08012345678"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div class="form-group">
+
+                        <label for="address">
+                            Delivery Address
+                        </label>
+
+                        <textarea
+                            id="address"
+                            name="address"
+                            rows="4"
+                            placeholder="Enter your full delivery address"
+                            required
+                        ></textarea>
+
+                    </div>
+
+
+                    <div class="form-row">
+
+                        <div class="form-group">
+
+                            <label for="state">
+                                State
+                            </label>
+
+                            <select
+                                id="state"
+                                name="state"
+                                required
+                            >
+
+                                <option value="">
+                                    Select State
+                                </option>
+
+                                <option>Lagos</option>
+                                <option>Abuja (FCT)</option>
+                                <option>Rivers</option>
+                                <option>Oyo</option>
+                                <option>Kano</option>
+                                <option>Ogun</option>
+                                <option>Kaduna</option>
+                                <option>Enugu</option>
+                                <option>Delta</option>
+                                <option>Akwa Ibom</option>
+                                <option>Anambra</option>
+                                <option>Abia</option>
+                                <option>Cross River</option>
+                                <option>Edo</option>
+                                <option>Imo</option>
+                                <option>Osun</option>
+                                <option>Ondo</option>
+                                <option>Kwara</option>
+                                <option>Benue</option>
+                                <option>Niger</option>
+                                <option>Plateau</option>
+                                <option>Ekiti</option>
+                                <option>Bayelsa</option>
+                                <option>Ebonyi</option>
+                                <option>Gombe</option>
+                                <option>Jigawa</option>
+                                <option>Yobe</option>
+                                <option>Borno</option>
+                                <option>Kebbi</option>
+                                <option>Kogi</option>
+                                <option>Nasarawa</option>
+                                <option>Sokoto</option>
+                                <option>Taraba</option>
+                                <option>Zamfara</option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label for="city">
+                                City
+                            </label>
+
+                            <input
+                                type="text"
+                                id="city"
+                                name="city"
+                                placeholder="e.g. Ikeja"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =========================
+                         PAYMENT
+                    ========================== -->
+
+                    <div class="payment-section">
+
+                        <div class="card-heading">
+
+                            <div class="heading-number">
+                                2
+                            </div>
+
+                            <div>
+                                <h2>Payment</h2>
+                                <p>Pay securely with Paystack.</p>
+                            </div>
+
+                        </div>
+
+
+                        <div class="payment-box">
+
+                            <div class="payment-logo">
+                                💳
+                            </div>
+
+                            <div class="payment-info">
+
+                                <strong>
+                                    Paystack
+                                </strong>
+
+                                <span>
+                                    Card, bank transfer, USSD and other
+                                    supported payment methods
+                                </span>
+
+                            </div>
+
+                            <div class="secure-badge">
+                                🔒 Secure
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        id="pay-button"
+                        class="pay-button"
+                    >
+
+                        <span id="pay-button-text">
+                            🔒 Pay ₦{{ "{:,.2f}".format(total) }}
+                        </span>
+
+                    </button>
+
+
+                    <p class="secure-message">
+                        🔒 Your payment is securely processed by Paystack.
+                    </p>
+
+                </form>
+
+            </section>
+
+
+
+            <!-- =========================
+                 ORDER SUMMARY
+            ========================== -->
+            <aside class="order-card">
+
+                <div class="order-heading">
+
+                    <h2>Your Order</h2>
+
+                    <span>
+                        {{ cart_items|length }}
+                        {% if cart_items|length == 1 %}
+                            item
+                        {% else %}
+                            items
+                        {% endif %}
+                    </span>
+
+                </div>
+
+
+                <div class="order-items">
+
+                    {% for item in cart_items %}
+
+                    <div class="order-item">
+
+                        <div class="product-image">
+
+                            {% if item.image %}
+
+                                <img
+                                    src="{{ item.image }}"
+                                    alt="{{ item.name }}"
+                                >
+
+                            {% else %}
+
+                                <div class="no-image">
+                                    🛍️
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div class="product-details">
+
+                            <h3>
+                                {{ item.name }}
+                            </h3>
+
+                            <p>
+                                Qty: {{ item.quantity }}
+                            </p>
+
+                            <strong>
+                                ₦{{ "{:,.2f}".format(item.price * item.quantity) }}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                    {% else %}
+
+                    <div class="empty-order">
+
+                        <div>🛒</div>
+
+                        <p>Your cart is empty.</p>
+
+                        <a href="{{ url_for('home') }}">
+                            Continue Shopping
+                        </a>
+
+                    </div>
+
+                    {% endfor %}
+
+                </div>
+
+
+                <div class="summary">
+
+                    <div class="summary-row">
+
+                        <span>Subtotal</span>
+
+                        <strong>
+                            ₦{{ "{:,.2f}".format(total) }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="summary-row">
+
+                        <span>Delivery</span>
+
+                        <strong class="delivery">
+                            Calculated after payment
+                        </strong>
+
+                    </div>
+
+
+                    <div class="divider"></div>
+
+
+                    <div class="total-row">
+
+                        <span>Total</span>
+
+                        <strong>
+                            ₦{{ "{:,.2f}".format(total) }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="trust-list">
+
+                    <div>
+                        <span>✓</span>
+                        Secure payment
+                    </div>
+
+                    <div>
+                        <span>✓</span>
+                        Nigerian sellers
+                    </div>
+
+                    <div>
+                        <span>✓</span>
+                        Nationwide delivery
+                    </div>
+
+                    <div>
+                        <span>✓</span>
+                        Pay in Nigerian Naira
+                    </div>
+
+                </div>
+
+            </aside>
+
+        </div>
+
+    </main>
+
+
+
+    <!-- =========================
+         PAYSTACK JAVASCRIPT
+    ========================== -->
+
+    <script>
+
+        /*
+         * IMPORTANT:
+         *
+         * Replace the value below with your
+         * PAYSTACK PUBLIC KEY.
+         *
+         * It is safe for this key to be visible
+         * in your HTML.
+         *
+         * NEVER put your Paystack SECRET KEY here.
+         */
+
+        const PAYSTACK_PUBLIC_KEY = "pk_test_3a23b0594bd9ee4878b78d7d090f4d4a12a62721";
+
+
+        function startPayment(event) {
+
+            event.preventDefault();
+
+
+            const form = document.getElementById("checkout-form");
+
+            if (!form.checkValidity()) {
+
+                form.reportValidity();
+
+                return;
+
+            }
+
+
+            const email =
+                document.getElementById("email").value.trim();
+
+
+            const firstName =
+                document.getElementById("first_name").value.trim();
+
+
+            const lastName =
+                document.getElementById("last_name").value.trim();
+
+
+            const phone =
+                document.getElementById("phone").value.trim();
+
+
+            const address =
+                document.getElementById("address").value.trim();
+
+
+            const state =
+                document.getElementById("state").value;
+
+
+            const city =
+                document.getElementById("city").value.trim();
+
+
+            const button =
+                document.getElementById("pay-button");
+
+
+            const buttonText =
+                document.getElementById("pay-button-text");
+
+
+            /*
+             * Basic check so you don't accidentally
+             * launch Paystack with the placeholder key.
+             */
+
+            if (
+                !PAYSTACK_PUBLIC_KEY ||
+                PAYSTACK_PUBLIC_KEY === "pk_test_YOUR_PUBLIC_KEY_HERE"
+            ) {
+
+                alert(
+                    "Please add your Paystack public key to checkout.html."
+                );
+
+                return;
+
+            }
+
+
+            button.disabled = true;
+
+            buttonText.textContent = "Opening Paystack...";
+
+
+            /*
+             * Amount is supplied by Flask in Kobo.
+             *
+             * Example:
+             * ₦10,000 = 1,000,000 kobo
+             */
+
+            const amount =
+                {{ ((total * 100)|round|int) }};
+
+
+            const handler =
+                PaystackPop.setup({
+
+                    key: PAYSTACK_PUBLIC_KEY,
+
+                    email: email,
+
+                    amount: amount,
+
+                    currency: "NGN",
+
+                    ref:
+                        "NAIJACART-" +
+                        Date.now() +
+                        "-" +
+                        Math.floor(
+                            Math.random() * 100000
+                        ),
+
+
+                    metadata: {
+
+                        custom_fields: [
+
+                            {
+                                display_name: "First Name",
+                                variable_name: "first_name",
+                                value: firstName
+                            },
+
+                            {
+                                display_name: "Last Name",
+                                variable_name: "last_name",
+                                value: lastName
+                            },
+
+                            {
+                                display_name: "Phone",
+                                variable_name: "phone",
+                                value: phone
+                            },
+
+                            {
+                                display_name: "Delivery Address",
+                                variable_name: "delivery_address",
+                                value: address
+                            },
+
+                            {
+                                display_name: "State",
+                                variable_name: "state",
+                                value: state
+                            },
+
+                            {
+                                display_name: "City",
+                                variable_name: "city",
+                                value: city
+                            }
+
+                        ]
+
+                    },
+
+
+                    callback: function(response) {
+
+                        /*
+                         * Payment was completed on Paystack.
+                         *
+                         * Send the reference to Flask so
+                         * the backend can verify it using
+                         * the SECRET KEY.
+                         */
+
+                        buttonText.textContent =
+                            "Verifying payment...";
+
+
+                        const data = {
+
+                            reference:
+                                response.reference,
+
+                            first_name:
+                                firstName,
+
+                            last_name:
+                                lastName,
+
+                            email:
+                                email,
+
+                            phone:
+                                phone,
+
+                            address:
+                                address,
+
+                            state:
+                                state,
+
+                            city:
+                                city
+
+                        };
+
+
+                        fetch(
+                            "{{ url_for('verify_payment') }}",
+                            {
+
+                                method: "POST",
+
+                                headers: {
+                                    "Content-Type":
+                                        "application/json"
+                                },
+
+                                body:
+                                    JSON.stringify(data)
+
+                            }
+                        )
+
+                        .then(function(res) {
+
+                            return res.json();
+
+                        })
+
+                        .then(function(result) {
+
+                            if (result.success) {
+
+                                window.location.href =
+                                    result.redirect;
+
+                            }
+
+                            else {
+
+                                alert(
+                                    result.message ||
+                                    "Payment verification failed."
+                                );
+
+                                button.disabled = false;
+
+                                buttonText.textContent =
+                                    "🔒 Pay ₦{{ "{:,.2f}".format(total) }}";
+
+                            }
+
+                        })
+
+                        .catch(function(error) {
+
+                            console.error(error);
+
+                            alert(
+                                "Something went wrong while verifying your payment."
+                            );
+
+                            button.disabled = false;
+
+                            buttonText.textContent =
+                                "🔒 Pay ₦{{ "{:,.2f}".format(total) }}";
+
+                        });
+
+                    },
+
+
+                    onClose: function() {
+
+                        button.disabled = false;
+
+                        buttonText.textContent =
+                            "🔒 Pay ₦{{ "{:,.2f}".format(total) }}";
+
+                    }
+
+                });
+
+
+            handler.openIframe();
+
+        }
+
+    </script>
+
+</body>
+</html>
+

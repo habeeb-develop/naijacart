@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Orders | NaijaCart Admin</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/admin_orders.css') }}"
+    >
+</head>
+
+<body>
+
+<div class="admin-layout">
+
+    <!-- =====================================================
+         SIDEBAR
+         ===================================================== -->
+
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                🛍
+            </div>
+
+            <div class="brand-text">
+                <h2>NaijaCart</h2>
+                <span>Administration</span>
+            </div>
+
+        </div>
+
+
+        <nav class="sidebar-nav">
+
+            <a href="{{ url_for('admin_dashboard') }}">
+                <span>▦</span>
+                Dashboard
+            </a>
+
+            <a href="{{ url_for('admin_orders') }}" class="active">
+                <span>▤</span>
+                Orders
+            </a>
+
+            <a href="{{ url_for('admin_products') }}">
+                <span>◈</span>
+                Products
+            </a>
+
+            <a href="#">
+                <span>♟</span>
+                Customers
+            </a>
+
+            <a href="#">
+                <span>⚙</span>
+                Settings
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <div class="admin-profile">
+
+                <div class="profile-avatar">
+                    A
+                </div>
+
+                <div class="profile-info">
+                    <strong>NaijaCart Administrator</strong>
+                    <small>Administrator</small>
+                </div>
+
+            </div>
+
+            <a
+                href="{{ url_for('admin_logout') }}"
+                class="logout"
+            >
+                <span>↪</span>
+                Logout
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN
+         ===================================================== -->
+
+    <main class="main-content">
+
+
+        <!-- TOP BAR -->
+
+        <header class="topbar">
+
+            <div>
+
+                <div class="breadcrumb">
+                    Admin
+                    <span>/</span>
+                    Orders
+                </div>
+
+                <h1>Orders</h1>
+
+                <p>
+                    Manage and track all NaijaCart orders.
+                </p>
+
+            </div>
+
+
+            <div class="topbar-right">
+
+                <div class="system-status">
+                    <span class="online-dot"></span>
+                    System Online
+                </div>
+
+                <div class="top-admin">
+
+                    <div class="mini-avatar">
+                        A
+                    </div>
+
+                    <div>
+                        <strong>Administrator</strong>
+                        <small>Admin Account</small>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- BACK BUTTON -->
+
+        <a
+            href="{{ url_for('admin_dashboard') }}"
+            class="back-button"
+        >
+            ← Dashboard
+        </a>
+
+
+        <!-- =================================================
+             STATISTICS
+             ================================================= -->
+
+        <section class="stats-grid">
+
+
+            <div class="stat-card total">
+
+                <div class="stat-icon">
+                    ▣
+                </div>
+
+                <div class="stat-content">
+                    <span>Total Orders</span>
+                    <strong>{{ total_orders }}</strong>
+                    <small>All orders received</small>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card pending">
+
+                <div class="stat-icon">
+                    ◷
+                </div>
+
+                <div class="stat-content">
+                    <span>Pending</span>
+                    <strong>{{ pending_orders }}</strong>
+                    <small>Awaiting processing</small>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card processing">
+
+                <div class="stat-icon">
+                    ◌
+                </div>
+
+                <div class="stat-content">
+                    <span>Processing</span>
+                    <strong>{{ processing_orders }}</strong>
+                    <small>Currently processing</small>
+                </div>
+
+            </div>
+
+
+            <div class="stat-card completed">
+
+                <div class="stat-icon">
+                    ✓
+                </div>
+
+                <div class="stat-content">
+                    <span>Completed</span>
+                    <strong>{{ completed_orders }}</strong>
+                    <small>Successfully delivered</small>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             ORDERS CARD
+             ================================================= -->
+
+        <section class="orders-card">
+
+
+            <div class="orders-header">
+
+                <div>
+                    <h2>All Orders</h2>
+
+                    <p>
+                        Review customer orders and update their status.
+                    </p>
+                </div>
+
+                <div class="orders-count">
+                    {{ orders|length }} Orders
+                </div>
+
+            </div>
+
+
+            <div class="table-container">
+
+                <table class="orders-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Order</th>
+                            <th>Customer</th>
+                            <th>Contact</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                        {% for order in orders %}
+
+                        <tr>
+
+                            <td>
+
+                                <a
+                                    href="{{ url_for('admin_order_detail', order_id=order['id']) }}"
+                                    class="order-number"
+                                >
+                                    #{{ order['id'] }}
+                                </a>
+
+                                <small class="order-label">
+                                    Order ID
+                                </small>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="customer">
+
+                                    <div class="customer-avatar">
+                                        {{ order['customer_name'][0]|upper }}
+                                    </div>
+
+                                    <div class="customer-details">
+
+                                        <strong>
+                                            {{ order['customer_name'] }}
+                                        </strong>
+
+                                        <small>
+                                            Customer
+                                        </small>
+
+                                    </div>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="contact">
+
+                                    <span>
+                                        {{ order['phone'] }}
+                                    </span>
+
+                                    <span>
+                                        {{ order['email'] }}
+                                    </span>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <strong class="amount">
+                                    ₦{{ "{:,.2f}".format(order['total']) }}
+                                </strong>
+
+                            </td>
+
+
+                            <td>
+
+                                {% set status = order['status']|lower|replace(' ', '-') %}
+
+                                <span class="status {{ status }}">
+
+                                    <span class="status-dot"></span>
+
+                                    {{ order['status'] }}
+
+                                </span>
+
+                            </td>
+
+
+                            <td>
+
+                                <div class="date">
+
+                                    <strong>
+                                        {{ order['created_at'] }}
+                                    </strong>
+
+                                </div>
+
+                            </td>
+
+
+                            <td>
+
+                                <a
+                                    href="{{ url_for('admin_order_detail', order_id=order['id']) }}"
+                                    class="view-button"
+                                >
+                                    View
+                                </a>
+
+                            </td>
+
+                        </tr>
+
+                        {% else %}
+
+                        <tr>
+
+                            <td
+                                colspan="7"
+                                class="empty"
+                            >
+
+                                <div class="empty-icon">
+                                    ◫
+                                </div>
+
+                                <h3>No orders yet</h3>
+
+                                <p>
+                                    Customer orders will appear here.
+                                </p>
+
+                            </td>
+
+                        </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+
+        <footer class="footer">
+
+            <span>
+                © 2026 NaijaCart
+            </span>
+
+            <span>
+                Admin Dashboard
+            </span>
+
+        </footer>
+
+
+    </main>
+
+</div>
+
+</body>
+</html>

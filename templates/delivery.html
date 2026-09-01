@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Home Delivery | NaijaCart</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/delivery.css') }}">
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+
+</head>
+
+<body>
+
+<header>
+
+
+<div class="header-inner">
+
+    <a href="{{ url_for('home') }}" class="logo">
+        <span>N</span>
+
+        <div>
+            <strong>NaijaCart</strong>
+            <small>Everything Nigerian</small>
+        </div>
+    </a>
+
+    <a href="{{ url_for('cart') }}" class="cart-link">
+        🛒 View Cart
+    </a>
+
+</div>
+
+
+</header>
+
+<main>
+
+
+<section class="hero">
+
+    <div class="container">
+
+        <span class="label">
+            🚚 NAIJACART DELIVERY
+        </span>
+
+        <h1>
+            We Bring Your Order
+            <span>To Your Doorstep.</span>
+        </h1>
+
+        <p>
+            Shop from anywhere and have your products delivered
+            directly to your home.
+        </p>
+
+    </div>
+
+</section>
+
+
+<section class="delivery-options">
+
+    <div class="container">
+
+        <div class="section-title">
+
+            <span class="label">
+                HOW IT WORKS
+            </span>
+
+            <h2>
+                Simple Home Delivery
+            </h2>
+
+        </div>
+
+
+        <div class="steps">
+
+            <div class="step">
+
+                <div class="number">
+                    01
+                </div>
+
+                <div class="icon">
+                    🛍️
+                </div>
+
+                <h3>
+                    Place Your Order
+                </h3>
+
+                <p>
+                    Choose your favourite products
+                    and proceed to checkout.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <div class="number">
+                    02
+                </div>
+
+                <div class="icon">
+                    📍
+                </div>
+
+                <h3>
+                    Enter Your Address
+                </h3>
+
+                <p>
+                    Provide the address where you'd
+                    like your order delivered.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <div class="number">
+                    03
+                </div>
+
+                <div class="icon">
+                    📦
+                </div>
+
+                <h3>
+                    We Deliver
+                </h3>
+
+                <p>
+                    Your order is prepared and sent
+                    to your delivery address.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <div class="number">
+                    04
+                </div>
+
+                <div class="icon">
+                    😊
+                </div>
+
+                <h3>
+                    Receive Your Order
+                </h3>
+
+                <p>
+                    Receive your package conveniently
+                    at your doorstep.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="delivery-info">
+
+    <div class="container info-grid">
+
+        <div class="info-card">
+
+            <div class="info-icon">
+                🚚
+            </div>
+
+            <h3>
+                Doorstep Delivery
+            </h3>
+
+            <p>
+                No need to travel to collect your products.
+                We'll deliver to the address you provide.
+            </p>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <div class="info-icon">
+                📍
+            </div>
+
+            <h3>
+                Accurate Address
+            </h3>
+
+            <p>
+                Make sure your street, city, state and
+                phone number are correct when checking out.
+            </p>
+
+        </div>
+
+
+        <div class="info-card">
+
+            <div class="info-icon">
+                🔔
+            </div>
+
+            <h3>
+                Order Updates
+            </h3>
+
+            <p>
+                Keep your phone available so the delivery
+                team can contact you when necessary.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="delivery-cta">
+
+    <div class="container">
+
+        <div>
+
+            <span>
+                READY TO SHOP?
+            </span>
+
+            <h2>
+                Find Something You Love.
+            </h2>
+
+        </div>
+
+        <a href="{{ url_for('home') }}">
+            Start Shopping →
+        </a>
+
+    </div>
+
+</section>
+
+
+</main>
+
+<footer>
+    © 2026 NaijaCart · Made for Nigerians 🇳🇬
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Shopping Cart | NaijaCart</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/cart.css') }}"
+    >
+</head>
+
+<body>
+
+<!-- ======================================================
+     HEADER
+====================================================== -->
+
+<header class="cart-header">
+
+    <div class="header-inner">
+
+        <a
+            href="{{ url_for('home') }}"
+            class="logo"
+        >
+            <span class="logo-icon">🇳🇬</span>
+            <span>Naija<span>Cart</span></span>
+        </a>
+
+        <a
+            href="{{ url_for('home') }}"
+            class="continue-shopping"
+        >
+            ← Continue Shopping
+        </a>
+
+    </div>
+
+</header>
+
+
+<!-- ======================================================
+     FLASH MESSAGES
+====================================================== -->
+
+{% with messages = get_flashed_messages() %}
+
+    {% if messages %}
+
+        <div class="flash-container">
+
+            {% for message in messages %}
+
+                <div class="flash-message">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+{% endwith %}
+
+
+<!-- ======================================================
+     MAIN
+====================================================== -->
+
+<main class="cart-page">
+
+    <div class="page-heading">
+
+        <div>
+            <p class="eyebrow">NAIJACART</p>
+
+            <h1>
+                Your Shopping Cart
+            </h1>
+
+            <p class="cart-description">
+                Review your items before placing your order.
+            </p>
+        </div>
+
+        {% if count > 0 %}
+
+        <div class="item-count">
+            {{ count }}
+            {% if count == 1 %}
+                item
+            {% else %}
+                items
+            {% endif %}
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- ==================================================
+         EMPTY CART
+    ================================================== -->
+
+    {% if not items %}
+
+        <section class="empty-cart">
+
+            <div class="empty-icon">
+                🛒
+            </div>
+
+            <h2>
+                Your cart is empty
+            </h2>
+
+            <p>
+                You haven't added anything to your cart yet.
+            </p>
+
+            <a
+                href="{{ url_for('home') }}"
+                class="shop-button"
+            >
+                Start Shopping
+            </a>
+
+        </section>
+
+    {% else %}
+
+
+    <!-- ==================================================
+         CART CONTENT
+    ================================================== -->
+
+    <div class="cart-layout">
+
+
+        <!-- ==============================================
+             ITEMS
+        =============================================== -->
+
+        <section class="cart-items-section">
+
+            <div class="section-header">
+
+                <h2>
+                    Cart Items
+                </h2>
+
+                <form
+                    action="{{ url_for('clear_cart') }}"
+                    method="POST"
+                    onsubmit="return confirm('Are you sure you want to clear your cart?');"
+                >
+
+                    <button
+                        type="submit"
+                        class="clear-cart-btn"
+                    >
+                        Clear Cart
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- ==========================================
+                 PRODUCT LOOP
+            =========================================== -->
+
+            <div class="cart-items">
+
+                {% for item in items %}
+
+                    <article class="cart-item">
+
+
+                        <!-- PRODUCT IMAGE -->
+
+                        <div class="product-image">
+
+                            {% if item.product['image'] %}
+
+                                <img
+                                    src="{{ item.product['image'] }}"
+                                    alt="{{ item.product['name'] }}"
+                                >
+
+                            {% else %}
+
+                                <div class="no-image">
+                                    🛍️
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <!-- PRODUCT INFORMATION -->
+
+                        <div class="product-info">
+
+                            <span class="product-category">
+                                {{ item.product['category']|title }}
+                            </span>
+
+                            <h3>
+                                {{ item.product['name'] }}
+                            </h3>
+
+                            {% if item.product['description'] %}
+
+                                <p class="description">
+                                    {{ item.product['description'] }}
+                                </p>
+
+                            {% endif %}
+
+                            <div class="unit-price">
+                                ₦{{ "{:,.2f}".format(item.product['price']) }}
+                                each
+                            </div>
+
+                        </div>
+
+
+                        <!-- QUANTITY -->
+
+                        <div class="quantity-area">
+
+                            <span class="quantity-label">
+                                Quantity
+                            </span>
+
+                            <form
+                                action="{{ url_for('update_cart', product_id=item.product['id']) }}"
+                                method="POST"
+                                class="quantity-form"
+                            >
+
+                                <input
+                                    type="number"
+                                    name="quantity"
+                                    value="{{ item.quantity }}"
+                                    min="1"
+                                    max="{{ item.product['stock'] }}"
+                                >
+
+                                <button
+                                    type="submit"
+                                    title="Update quantity"
+                                >
+                                    Update
+                                </button>
+
+                            </form>
+
+                        </div>
+
+
+                        <!-- TOTAL -->
+
+                        <div class="item-total">
+
+                            <strong>
+                                ₦{{ "{:,.2f}".format(item.line_total) }}
+                            </strong>
+
+                            <form
+                                action="{{ url_for('remove_from_cart', product_id=item.product['id']) }}"
+                                method="POST"
+                            >
+
+                                <button
+                                    type="submit"
+                                    class="remove-btn"
+                                >
+                                    Remove
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </article>
+
+                {% endfor %}
+
+            </div>
+
+        </section>
+
+
+        <!-- ==============================================
+             ORDER SUMMARY
+        =============================================== -->
+
+        <aside class="order-summary">
+
+            <h2>
+                Order Summary
+            </h2>
+
+
+            <div class="summary-row">
+
+                <span>
+                    Subtotal
+                </span>
+
+                <strong>
+                    ₦{{ "{:,.2f}".format(subtotal) }}
+                </strong>
+
+            </div>
+
+
+            <div class="summary-row">
+
+                <span>
+                    Delivery
+                </span>
+
+                <strong>
+                    ₦{{ "{:,.2f}".format(delivery) }}
+                </strong>
+
+            </div>
+
+
+            <div class="summary-divider"></div>
+
+
+            <div class="summary-total">
+
+                <span>
+                    Total
+                </span>
+
+                <strong>
+                    ₦{{ "{:,.2f}".format(total) }}
+                </strong>
+
+            </div>
+
+
+            <!-- ==========================================
+                 CHECKOUT
+            =========================================== -->
+
+            <div class="checkout-section">
+
+                <h3>
+                    Delivery Information
+                </h3>
+
+                <form
+                    action="{{ url_for('checkout') }}"
+                    method="POST"
+                    class="checkout-form"
+                >
+
+                    <label for="customer_name">
+                        Full Name
+                    </label>
+
+                    <input
+                        type="text"
+                        id="customer_name"
+                        name="customer_name"
+                        placeholder="Enter your full name"
+                        required
+                    >
+
+
+                    <label for="customer_phone">
+                        Phone Number
+                    </label>
+
+                    <input
+                        type="tel"
+                        id="customer_phone"
+                        name="customer_phone"
+                        placeholder="08012345678"
+                        required
+                    >
+
+
+                    <label for="customer_email">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        id="customer_email"
+                        name="customer_email"
+                        placeholder="you@example.com"
+                        required
+                    >
+
+
+                    <label for="customer_address">
+                        Delivery Address
+                    </label>
+
+                    <textarea
+                        id="customer_address"
+                        name="customer_address"
+                        rows="4"
+                        placeholder="Enter your complete delivery address"
+                        required
+                    ></textarea>
+
+
+                    <button
+                        type="submit"
+                        class="checkout-button"
+                    >
+                        Place Order
+                        <span>→</span>
+                    </button>
+
+                </form>
+
+            </div>
+
+
+            <!-- SECURITY -->
+
+            <div class="secure-box">
+
+                <span class="secure-icon">
+                    🔒
+                </span>
+
+                <div>
+
+                    <strong>
+                        Secure Shopping
+                    </strong>
+
+                    <p>
+                        Your order information is handled securely.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+    </div>
+
+    {% endif %}
+
+</main>
+
+
+<!-- ======================================================
+     FOOTER
+====================================================== -->
+
+<footer class="cart-footer">
+
+    <p>
+        © 2026 NaijaCart. Proudly Nigerian 🇳🇬
+    </p>
+
+</footer>
+
+</body>
+</html>

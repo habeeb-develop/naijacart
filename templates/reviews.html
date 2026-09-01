@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Customer Reviews | NaijaCart</title>
+
+<link rel="stylesheet"
+      href="{{ url_for('static', filename='css/reviews.css') }}">
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+
+</head>
+
+<body>
+
+<header class="header">
+
+
+<div class="header-inner">
+
+    <a href="{{ url_for('home') }}" class="logo">
+        <span>N</span>
+
+        <div>
+            <strong>NaijaCart</strong>
+            <small>Everything Nigerian</small>
+        </div>
+    </a>
+
+    <a href="{{ url_for('home') }}" class="back">
+        ← Shop Products
+    </a>
+
+</div>
+
+
+</header>
+
+<main>
+
+
+<section class="reviews-hero">
+
+    <div class="container">
+
+        <span class="eyebrow">
+            CUSTOMER EXPERIENCE
+        </span>
+
+        <h1>
+            What Our Customers Say
+        </h1>
+
+        <p>
+            See honest reviews from NaijaCart customers
+            and share your own shopping experience.
+        </p>
+
+    </div>
+
+</section>
+
+
+<section class="review-summary">
+
+    <div class="container summary-grid">
+
+        <div class="rating-box">
+
+            <strong>
+                5.0
+            </strong>
+
+            <div class="stars">
+                ★★★★★
+            </div>
+
+            <span>
+                Overall customer rating
+            </span>
+
+        </div>
+
+
+        <div class="rating-bars">
+
+            <div class="bar-row">
+                <span>5 ★</span>
+                <div><i style="width: 90%;"></i></div>
+                <small>90%</small>
+            </div>
+
+            <div class="bar-row">
+                <span>4 ★</span>
+                <div><i style="width: 7%;"></i></div>
+                <small>7%</small>
+            </div>
+
+            <div class="bar-row">
+                <span>3 ★</span>
+                <div><i style="width: 2%;"></i></div>
+                <small>2%</small>
+            </div>
+
+            <div class="bar-row">
+                <span>2 ★</span>
+                <div><i style="width: 1%;"></i></div>
+                <small>1%</small>
+            </div>
+
+            <div class="bar-row">
+                <span>1 ★</span>
+                <div><i style="width: 0%;"></i></div>
+                <small>0%</small>
+            </div>
+
+        </div>
+
+
+        <button
+            class="write-review"
+            onclick="document.getElementById('reviewModal').classList.add('active')"
+        >
+            ✍ Write a Review
+        </button>
+
+    </div>
+
+</section>
+
+
+<section class="reviews-list">
+
+    <div class="container">
+
+        <div class="list-heading">
+
+            <div>
+                <h2>
+                    Recent Reviews
+                </h2>
+
+                <p>
+                    Feedback from our customers.
+                </p>
+            </div>
+
+            <select>
+                <option>Most Recent</option>
+                <option>Highest Rated</option>
+                <option>Lowest Rated</option>
+            </select>
+
+        </div>
+
+
+        {% if reviews %}
+
+            {% for review in reviews %}
+
+            <article class="review-card">
+
+                <div class="review-avatar">
+                    {{ review['name'][0]|upper }}
+                </div>
+
+                <div class="review-body">
+
+                    <div class="review-top">
+
+                        <div>
+
+                            <strong>
+                                {{ review['name'] }}
+                            </strong>
+
+                            <span class="verified">
+                                ✓ Verified Purchase
+                            </span>
+
+                        </div>
+
+                        <small>
+                            {{ review['created_at'] }}
+                        </small>
+
+                    </div>
+
+
+                    <div class="review-stars">
+                        ★★★★★
+                    </div>
+
+                    <h3>
+                        {{ review['title'] }}
+                    </h3>
+
+                    <p>
+                        {{ review['comment'] }}
+                    </p>
+
+                </div>
+
+            </article>
+
+            {% endfor %}
+
+        {% else %}
+
+        <div class="no-reviews">
+
+            <div>
+                ⭐
+            </div>
+
+            <h3>
+                No reviews yet
+            </h3>
+
+            <p>
+                Be one of the first customers to share your experience.
+            </p>
+
+            <button
+                class="write-review"
+                onclick="document.getElementById('reviewModal').classList.add('active')"
+            >
+                Write the First Review
+            </button>
+
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</section>
+
+
+</main>
+
+<!-- REVIEW MODAL -->
+
+<div class="modal" id="reviewModal">
+
+
+<div class="modal-box">
+
+    <button
+        class="close"
+        onclick="document.getElementById('reviewModal').classList.remove('active')"
+    >
+        ×
+    </button>
+
+    <div class="modal-icon">
+        ⭐
+    </div>
+
+    <h2>
+        Write a Review
+    </h2>
+
+    <p>
+        Share your experience with other shoppers.
+    </p>
+
+    <form method="POST"
+          action="{{ url_for('submit_review') }}">
+
+        <label>
+            Product
+        </label>
+
+        <select name="product_id" required>
+
+            <option value="">
+                Select product
+            </option>
+
+            {% for product in products %}
+
+            <option value="{{ product['id'] }}">
+                {{ product['name'] }}
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+
+        <label>
+            Rating
+        </label>
+
+        <div class="stars-input">
+
+            <input type="radio" name="rating" value="5" id="star5">
+            <label for="star5">★</label>
+
+            <input type="radio" name="rating" value="4" id="star4">
+            <label for="star4">★</label>
+
+            <input type="radio" name="rating" value="3" id="star3">
+            <label for="star3">★</label>
+
+            <input type="radio" name="rating" value="2" id="star2">
+            <label for="star2">★</label>
+
+            <input type="radio" name="rating" value="1" id="star1">
+            <label for="star1">★</label>
+
+        </div>
+
+
+        <label>
+            Review Title
+        </label>
+
+        <input
+            type="text"
+            name="title"
+            placeholder="Example: Great quality"
+            required
+        >
+
+
+        <label>
+            Your Review
+        </label>
+
+        <textarea
+            name="comment"
+            rows="5"
+            placeholder="Tell us about your experience..."
+            required
+        ></textarea>
+
+
+        <button type="submit" class="submit-review">
+            Submit Review
+        </button>
+
+    </form>
+
+</div>
+
+
+</div>
+
+<script>
+
+const modal = document.getElementById("reviewModal");
+
+modal.addEventListener("click", function(event) {
+
+    if (event.target === modal) {
+        modal.classList.remove("active");
+    }
+
+});
+
+</script>
+
+</body>
+</html>

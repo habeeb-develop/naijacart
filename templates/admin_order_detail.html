@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        Order #{{ order["id"] }} | NaijaCart Admin
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/admin_order_detail.css') }}"
+    >
+
+</head>
+
+<body>
+
+<div class="admin-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                N
+            </div>
+
+            <div>
+                <h2>NaijaCart</h2>
+                <span>Administration</span>
+            </div>
+
+        </div>
+
+
+        <nav class="sidebar-nav">
+
+            <a href="{{ url_for('admin_dashboard') }}">
+                <span>▣</span>
+                Dashboard
+            </a>
+
+            <a
+                href="{{ url_for('admin_orders') }}"
+                class="active"
+            >
+                <span>🛒</span>
+                Orders
+            </a>
+
+            <a href="{{ url_for('admin_products') }}">
+                <span>📦</span>
+                Products
+            </a>
+
+            <a href="{{ url_for('admin_customers') }}">
+                <span>👥</span>
+                Customers
+            </a>
+
+            <a href="{{ url_for('admin_sellers') }}">
+                <span>🏪</span>
+                Sellers
+            </a>
+
+        </nav>
+
+
+        <div class="sidebar-bottom">
+
+            <div class="admin-user">
+
+                <div class="avatar">
+                    {{ session.get("user_name", "A")[0]|upper }}
+                </div>
+
+                <div>
+
+                    <strong>
+                        {{ session.get(
+                            "user_name",
+                            "Administrator"
+                        ) }}
+                    </strong>
+
+                    <small>
+                        Administrator
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <a
+                href="{{ url_for('admin_logout') }}"
+                class="logout-link"
+            >
+                🚪 Logout
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        <header class="topbar">
+
+            <div>
+
+                <a
+                    href="{{ url_for('admin_orders') }}"
+                    class="back-link"
+                >
+                    ← Back to Orders
+                </a>
+
+                <h1>
+                    Order #{{ order["id"] }}
+                </h1>
+
+                <p>
+                    Order details and management
+                </p>
+
+            </div>
+
+        </header>
+
+
+        {% with messages = get_flashed_messages() %}
+
+            {% if messages %}
+
+                <div class="flash-container">
+
+                    {% for message in messages %}
+
+                        <div class="flash-message">
+                            {{ message }}
+                        </div>
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+        {% endwith %}
+
+
+        <div class="detail-grid">
+
+            <!-- CUSTOMER -->
+            <section class="detail-card">
+
+                <div class="detail-card-header">
+
+                    <h2>
+                        Customer Information
+                    </h2>
+
+                </div>
+
+                <div class="detail-content">
+
+                    <div class="detail-row">
+
+                        <span>Name</span>
+
+                        <strong>
+                            {{ order["customer_name"] or "Guest" }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detail-row">
+
+                        <span>Email</span>
+
+                        <strong>
+                            {{ order["customer_email"] or "—" }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detail-row">
+
+                        <span>Phone</span>
+
+                        <strong>
+                            {{ order["customer_phone"] or "—" }}
+                        </strong>
+
+                    </div>
+
+
+                    <div class="detail-row">
+
+                        <span>Delivery Address</span>
+
+                        <strong>
+                            {{ order["delivery_address"] or "—" }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- STATUS -->
+            <section class="detail-card">
+
+                <div class="detail-card-header">
+
+                    <h2>
+                        Order Status
+                    </h2>
+
+                </div>
+
+
+                <div class="detail-content">
+
+                    <form
+                        method="POST"
+                        action="{{ url_for(
+                            'update_order_status',
+                            order_id=order['id']
+                        ) }}"
+                    >
+
+                        <label>
+                            Update Status
+                        </label>
+
+                        <select
+                            name="status"
+                            class="status-select"
+                        >
+
+                            <option
+                                value="Pending"
+                                {% if order["status"] == "Pending" %}
+                                selected
+                                {% endif %}
+                            >
+                                Pending
+                            </option>
+
+                            <option
+                                value="Processing"
+                                {% if order["status"] == "Processing" %}
+                                selected
+                                {% endif %}
+                            >
+                                Processing
+                            </option>
+
+                            <option
+                                value="Shipped"
+                                {% if order["status"] == "Shipped" %}
+                                selected
+                                {% endif %}
+                            >
+                                Shipped
+                            </option>
+
+                            <option
+                                value="Completed"
+                                {% if order["status"] == "Completed" %}
+                                selected
+                                {% endif %}
+                            >
+                                Completed
+                            </option>
+
+                            <option
+                                value="Cancelled"
+                                {% if order["status"] == "Cancelled" %}
+                                selected
+                                {% endif %}
+                            >
+                                Cancelled
+                            </option>
+
+                        </select>
+
+
+                        <button
+                            type="submit"
+                            class="primary-button"
+                        >
+                            Update Order Status
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </section>
+
+
+            <!-- ORDER ITEMS -->
+            <section class="detail-card full-width">
+
+                <div class="detail-card-header">
+
+                    <div>
+
+                        <h2>
+                            Order Items
+                        </h2>
+
+                        <p>
+                            Products included in this order.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                {% if items %}
+
+                <div class="table-wrapper">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        {% for item in items %}
+
+                            <tr>
+
+                                <td>
+                                    <strong>
+                                        {{ item["product_name"] }}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    ₦{{ "{:,.2f}".format(
+                                        item["price"] or 0
+                                    ) }}
+                                </td>
+
+                                <td>
+                                    {{ item["quantity"] }}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        ₦{{ "{:,.2f}".format(
+                                            (item["price"] or 0)
+                                            * item["quantity"]
+                                        ) }}
+                                    </strong>
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+                {% else %}
+
+                    <div class="empty-state">
+                        <h3>No items found</h3>
+                    </div>
+
+                {% endif %}
+
+            </section>
+
+
+            <!-- PAYMENT SUMMARY -->
+            <section class="detail-card summary-card">
+
+                <div class="detail-card-header">
+
+                    <h2>
+                        Order Summary
+                    </h2>
+
+                </div>
+
+
+                <div class="summary-row">
+
+                    <span>
+                        Subtotal
+                    </span>
+
+                    <strong>
+                        ₦{{ "{:,.2f}".format(
+                            order["subtotal"] or 0
+                        ) }}
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-row">
+
+                    <span>
+                        Delivery
+                    </span>
+
+                    <strong>
+                        ₦{{ "{:,.2f}".format(
+                            order["delivery"] or 0
+                        ) }}
+                    </strong>
+
+                </div>
+
+
+                <div class="summary-total">
+
+                    <span>
+                        Total
+                    </span>
+
+                    <strong>
+                        ₦{{ "{:,.2f}".format(
+                            order["total"] or 0
+                        ) }}
+                    </strong>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+</div>
+
+</body>
+</html>

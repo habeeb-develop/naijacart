@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Payment on Delivery | NaijaCart</title>
+
+<link
+    rel="stylesheet"
+    href="{{ url_for('static', filename='css/payment_on_delivery.css') }}"
+>
+
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+
+
+</head>
+
+<body>
+
+<header>
+
+
+<div class="header-inner">
+
+    <a href="{{ url_for('home') }}" class="logo">
+
+        <span>N</span>
+
+        <div>
+            <strong>NaijaCart</strong>
+            <small>Everything Nigerian</small>
+        </div>
+
+    </a>
+
+    <a href="{{ url_for('cart') }}" class="cart">
+        🛒 Cart
+    </a>
+
+</div>
+
+
+</header>
+
+<main>
+
+
+<section class="hero">
+
+    <div class="container">
+
+        <div class="hero-icon">
+            💵
+        </div>
+
+        <span class="label">
+            EASY & CONVENIENT
+        </span>
+
+        <h1>
+            Payment on Delivery
+        </h1>
+
+        <p>
+            Order your products today and pay when
+            your package arrives at your doorstep.
+        </p>
+
+    </div>
+
+</section>
+
+
+<section class="how">
+
+    <div class="container">
+
+        <div class="heading">
+
+            <span class="label">
+                HOW IT WORKS
+            </span>
+
+            <h2>
+                Pay When Your Order Arrives
+            </h2>
+
+            <p>
+                We've made it simple and convenient.
+            </p>
+
+        </div>
+
+
+        <div class="steps">
+
+            <div class="step">
+
+                <div class="step-number">
+                    01
+                </div>
+
+                <div class="step-icon">
+                    🛍️
+                </div>
+
+                <h3>
+                    Choose Your Products
+                </h3>
+
+                <p>
+                    Add the products you want
+                    to your cart.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <div class="step-number">
+                    02
+                </div>
+
+                <div class="step-icon">
+                    📍
+                </div>
+
+                <h3>
+                    Enter Delivery Details
+                </h3>
+
+                <p>
+                    Tell us where you'd like
+                    your order delivered.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <div class="step-number">
+                    03
+                </div>
+
+                <div class="step-icon">
+                    📦
+                </div>
+
+                <h3>
+                    Receive Your Package
+                </h3>
+
+                <p>
+                    Our delivery team brings
+                    your order to you.
+                </p>
+
+            </div>
+
+
+            <div class="step">
+
+                <div class="step-number">
+                    04
+                </div>
+
+                <div class="step-icon">
+                    💵
+                </div>
+
+                <h3>
+                    Pay on Delivery
+                </h3>
+
+                <p>
+                    Pay the order amount when
+                    your package arrives.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="payment-note">
+
+    <div class="container note-box">
+
+        <div class="note-icon">
+            ℹ️
+        </div>
+
+        <div>
+
+            <h3>
+                Important Information
+            </h3>
+
+            <p>
+                Payment on Delivery may only be available
+                for eligible orders and delivery locations.
+                Availability will be shown during checkout.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="payment-options">
+
+    <div class="container">
+
+        <div class="heading">
+
+            <span class="label">
+                PAYMENT OPTIONS
+            </span>
+
+            <h2>
+                Choose How You Want To Pay
+            </h2>
+
+        </div>
+
+
+        <div class="options">
+
+            <div class="payment-card">
+
+                <div class="card-icon">
+                    💵
+                </div>
+
+                <h3>
+                    Payment on Delivery
+                </h3>
+
+                <p>
+                    Pay when your order reaches
+                    your delivery address.
+                </p>
+
+                <span class="available">
+                    Available where eligible
+                </span>
+
+            </div>
+
+
+            <div class="payment-card">
+
+                <div class="card-icon">
+                    💳
+                </div>
+
+                <h3>
+                    Pay Online
+                </h3>
+
+                <p>
+                    Make a secure online payment
+                    during checkout.
+                </p>
+
+                <span class="secure">
+                    🔒 Secure payment
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<section class="cta">
+
+    <div class="container">
+
+        <div>
+
+            <span>
+                READY?
+            </span>
+
+            <h2>
+                Start Shopping on NaijaCart.
+            </h2>
+
+        </div>
+
+        <a href="{{ url_for('home') }}">
+            Shop Now →
+        </a>
+
+    </div>
+
+</section>
+
+
+</main>
+
+<footer>
+    © 2026 NaijaCart · Made for Nigerians 🇳🇬
+</footer>
+
+</body>
+</html>

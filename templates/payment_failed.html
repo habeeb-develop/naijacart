@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Not Completed | NaijaCart</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7f6;
+            color: #222;
+        }
+        .box {
+            max-width: 650px;
+            margin: 80px auto;
+            padding: 35px;
+            background: white;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,.08);
+        }
+        .icon { font-size: 60px; }
+        h1 { color: #b42318; }
+        .button {
+            display: inline-block;
+            margin: 8px;
+            padding: 12px 22px;
+            background: #006b57;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+        .secondary {
+            background: #ddd;
+            color: #222;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="icon">!</div>
+        <h1>Payment Not Completed</h1>
+        <p>
+            Your payment was not confirmed. Your cart has not been cleared.
+        </p>
+
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <a class="button" href="{{ url_for('cart') }}">
+            Return to Cart
+        </a>
+
+        <a class="button secondary" href="{{ url_for('home') }}">
+            Continue Shopping
+        </a>
+    </div>
+</body>
+</html>

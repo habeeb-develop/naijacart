@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | NaijaCart</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/admin.css') }}">
+
+</head>
+
+
+<body class="admin-body">
+
+
+<!-- ======================================================
+     SIDEBAR
+====================================================== -->
+
+<aside class="admin-sidebar">
+
+    <div class="admin-brand">
+
+        <div class="brand-icon">
+            N
+        </div>
+
+        <div>
+            <strong>NaijaCart</strong>
+            <span>Admin Panel</span>
+        </div>
+
+    </div>
+
+
+    <nav class="admin-navigation">
+
+        <a href="{{ url_for('admin_dashboard') }}"
+           class="admin-nav-link active">
+
+            <span>📊</span>
+            Dashboard
+
+        </a>
+
+
+        <a href="{{ url_for('admin_orders') }}"
+           class="admin-nav-link">
+
+            <span>🛒</span>
+            Orders
+
+            {% if pending_orders > 0 %}
+                <span class="nav-badge">
+                    {{ pending_orders }}
+                </span>
+            {% endif %}
+
+        </a>
+
+
+        <a href="{{ url_for('admin_products') }}"
+           class="admin-nav-link">
+
+            <span>📦</span>
+            Products
+
+        </a>
+
+
+        <a href="{{ url_for('admin_customers') }}"
+           class="admin-nav-link">
+
+            <span>👥</span>
+            Customers
+
+        </a>
+
+
+        <a href="{{ url_for('admin_sellers') }}"
+           class="admin-nav-link">
+
+            <span>🏪</span>
+            Sellers
+
+        </a>
+
+    </nav>
+
+
+    <div class="sidebar-bottom">
+
+        <a href="{{ url_for('home') }}"
+           class="admin-nav-link">
+
+            <span>🌐</span>
+            View Store
+
+        </a>
+
+
+        <a href="{{ url_for('admin_logout') }}"
+           class="admin-nav-link logout-link">
+
+            <span>🚪</span>
+            Logout
+
+        </a>
+
+    </div>
+
+</aside>
+
+
+<!-- ======================================================
+     MAIN
+====================================================== -->
+
+<main class="admin-main">
+
+
+<header class="admin-header">
+
+    <div>
+
+        <h1>
+            Dashboard
+        </h1>
+
+        <p>
+            Welcome back, {{ session.get('user_name', 'Administrator') }}.
+            Here's what's happening with your store.
+        </p>
+
+    </div>
+
+
+    <div class="admin-profile">
+
+        <div class="profile-avatar">
+            {{ session.get('user_name', 'A')[0]|upper }}
+        </div>
+
+        <div>
+
+            <strong>
+                {{ session.get('user_name', 'Administrator') }}
+            </strong>
+
+            <span>
+                Administrator
+            </span>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+{% with messages = get_flashed_messages() %}
+
+    {% if messages %}
+
+        <div class="flash-container">
+
+            {% for message in messages %}
+
+                <div class="flash-message">
+                    {{ message }}
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% endif %}
+
+{% endwith %}
+
+
+<!-- ======================================================
+     STAT CARDS
+====================================================== -->
+
+<section class="stats-grid">
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon green">
+            📦
+        </div>
+
+        <div>
+
+            <span class="stat-label">
+                Total Products
+            </span>
+
+            <strong class="stat-number">
+                {{ total_products }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon blue">
+            🛒
+        </div>
+
+        <div>
+
+            <span class="stat-label">
+                Total Orders
+            </span>
+
+            <strong class="stat-number">
+                {{ total_orders }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div class="stat-card pending-card">
+
+        <div class="stat-icon orange">
+            ⏳
+        </div>
+
+        <div>
+
+            <span class="stat-label">
+                Pending Orders
+            </span>
+
+            <strong class="stat-number">
+                {{ pending_orders }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon purple">
+            👥
+        </div>
+
+        <div>
+
+            <span class="stat-label">
+                Customers
+            </span>
+
+            <strong class="stat-number">
+                {{ total_customers }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div class="stat-card">
+
+        <div class="stat-icon teal">
+            🏪
+        </div>
+
+        <div>
+
+            <span class="stat-label">
+                Sellers
+            </span>
+
+            <strong class="stat-number">
+                {{ total_sellers }}
+            </strong>
+
+        </div>
+
+    </div>
+
+
+    <div class="stat-card sales-card">
+
+        <div class="stat-icon green">
+            ₦
+        </div>
+
+        <div>
+
+            <span class="stat-label">
+                Store Sales
+            </span>
+
+            <strong class="stat-number">
+                ₦{{ "{:,.2f}".format(total_sales or 0) }}
+            </strong>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     ORDER STATUS
+====================================================== -->
+
+<section class="dashboard-section">
+
+    <div class="section-heading">
+
+        <div>
+
+            <h2>
+                Order Overview
+            </h2>
+
+            <p>
+                Monitor the current status of your orders.
+            </p>
+
+        </div>
+
+        <a href="{{ url_for('admin_orders') }}"
+           class="section-button">
+
+            View All Orders →
+
+        </a>
+
+    </div>
+
+
+    <div class="status-grid">
+
+
+        <div class="status-card pending">
+
+            <span class="status-dot"></span>
+
+            <div>
+
+                <strong>
+                    {{ pending_orders }}
+                </strong>
+
+                <span>
+                    Pending
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="status-card processing">
+
+            <span class="status-dot"></span>
+
+            <div>
+
+                <strong>
+                    {{ processing_orders }}
+                </strong>
+
+                <span>
+                    Processing
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="status-card shipped">
+
+            <span class="status-dot"></span>
+
+            <div>
+
+                <strong>
+                    {{ shipped_orders }}
+                </strong>
+
+                <span>
+                    Shipped
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="status-card completed">
+
+            <span class="status-dot"></span>
+
+            <div>
+
+                <strong>
+                    {{ completed_orders }}
+                </strong>
+
+                <span>
+                    Completed
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="status-card cancelled">
+
+            <span class="status-dot"></span>
+
+            <div>
+
+                <strong>
+                    {{ cancelled_orders }}
+                </strong>
+
+                <span>
+                    Cancelled
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- ======================================================
+     TWO COLUMN AREA
+====================================================== -->
+
+<div class="dashboard-columns">
+
+
+<!-- RECENT ORDERS -->
+
+<section class="dashboard-panel">
+
+    <div class="panel-header">
+
+        <div>
+
+            <h2>
+                Recent Orders
+            </h2>
+
+            <p>
+                Latest customer orders
+            </p>
+
+        </div>
+
+        <a href="{{ url_for('admin_orders') }}">
+            View all
+        </a>
+
+    </div>
+
+
+    {% if recent_orders %}
+
+        <div class="table-wrapper">
+
+            <table class="admin-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            Order
+                        </th>
+
+                        <th>
+                            Customer
+                        </th>
+
+                        <th>
+                            Total
+                        </th>
+
+                        <th>
+                            Status
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                {% for order in recent_orders %}
+
+                    <tr>
+
+                        <td>
+
+                            <a class="order-link"
+                               href="{{ url_for('admin_order_detail', order_id=order['id']) }}">
+
+                                #{{ order['id'] }}
+
+                            </a>
+
+                        </td>
+
+
+                        <td>
+                            {{ order['customer_name'] or 'Guest' }}
+                        </td>
+
+
+                        <td>
+                            ₦{{ "{:,.2f}".format(order['total'] or 0) }}
+                        </td>
+
+
+                        <td>
+
+                            <span class="status-badge
+                                status-{{ order['status']|lower }}">
+
+                                {{ order['status'] }}
+
+                            </span>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <span>🛒</span>
+
+            <h3>
+                No orders yet
+            </h3>
+
+            <p>
+                New orders will appear here.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+
+<!-- LOW STOCK -->
+
+<section class="dashboard-panel">
+
+    <div class="panel-header">
+
+        <div>
+
+            <h2>
+                Low Stock
+            </h2>
+
+            <p>
+                Products needing attention
+            </p>
+
+        </div>
+
+        <a href="{{ url_for('admin_products') }}">
+            Manage
+        </a>
+
+    </div>
+
+
+    {% if low_stock %}
+
+        <div class="stock-list">
+
+            {% for product in low_stock %}
+
+                <div class="stock-item">
+
+                    <div class="stock-image">
+
+                        {% if product['image'] %}
+
+                            <img src="{{ product['image'] }}"
+                                 alt="{{ product['name'] }}">
+
+                        {% else %}
+
+                            <span>📦</span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="stock-info">
+
+                        <strong>
+                            {{ product['name'] }}
+                        </strong>
+
+                        <span>
+                            {{ product['category']|title }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="stock-number
+                        {% if product['stock'] == 0 %}
+                            out
+                        {% else %}
+                            low
+                        {% endif %}">
+
+                        {{ product['stock'] }}
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <span>✅</span>
+
+            <h3>
+                Stock looks good
+            </h3>
+
+            <p>
+                No products are running low.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+</div>
+
+
+<!-- ======================================================
+     RECENT PRODUCTS
+====================================================== -->
+
+<section class="dashboard-panel full-panel">
+
+    <div class="panel-header">
+
+        <div>
+
+            <h2>
+                Recently Added Products
+            </h2>
+
+            <p>
+                Latest products in your store
+            </p>
+
+        </div>
+
+        <a href="{{ url_for('admin_products') }}">
+            Manage Products
+        </a>
+
+    </div>
+
+
+    {% if recent_products %}
+
+        <div class="product-admin-grid">
+
+            {% for product in recent_products %}
+
+                <div class="admin-product-card">
+
+                    <div class="admin-product-image">
+
+                        {% if product['image'] %}
+
+                            <img src="{{ product['image'] }}"
+                                 alt="{{ product['name'] }}">
+
+                        {% else %}
+
+                            <span>📦</span>
+
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="admin-product-content">
+
+                        <span class="category-label">
+                            {{ product['category']|title }}
+                        </span>
+
+                        <h3>
+                            {{ product['name'] }}
+                        </h3>
+
+                        <strong>
+                            ₦{{ "{:,.2f}".format(product['price'] or 0) }}
+                        </strong>
+
+                        <span class="stock-label">
+                            {{ product['stock'] }} in stock
+                        </span>
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    {% else %}
+
+        <div class="empty-state">
+
+            <span>📦</span>
+
+            <h3>
+                No products
+            </h3>
+
+            <p>
+                Add your first product.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+
+</main>
+
+</body>
+</html>

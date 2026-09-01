@@ -2,6 +2,7 @@
 venv/
 __pycache__/
 *.pyc
-database/
+database/*.db
+!database/naijacart.db
 naijacart-backend/
 naijacart-frontend/

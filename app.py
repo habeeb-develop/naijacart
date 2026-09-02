@@ -90,10 +90,10 @@ MAILBOXLAYER_URL = (
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 
-RESEND_FROM_EMAIL = os.environ.get(
-    "RESEND_FROM_EMAIL",
-    "onboarding@resend.dev"
-).strip()
+RESEND_FROM_EMAIL = "onboarding@resend.dev"
+
+print("RESEND_FROM_EMAIL:", RESEND_FROM_EMAIL)
+
 
 RESEND_FROM_NAME = os.environ.get(
     "RESEND_FROM_NAME",

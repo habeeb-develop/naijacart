@@ -89,6 +89,7 @@ MAILBOXLAYER_URL = (
 # ============================================================
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+print("RESEND_API_KEY loaded:", bool(os.environ.get("RESEND_API_KEY")))
 
 RESEND_FROM_EMAIL = os.environ.get(
     "RESEND_FROM_EMAIL",

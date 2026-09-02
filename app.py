@@ -96,7 +96,7 @@ print("TEST_VARIABLE:", os.environ.get("TEST_VARIABLE"))
 
 RESEND_FROM_EMAIL = os.environ.get(
     "RESEND_FROM_EMAIL",
-    "verify@naijacart.com"
+    "onboarding@resend.dev"
 ).strip()
 
 RESEND_FROM_NAME = os.environ.get(

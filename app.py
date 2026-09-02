@@ -76,7 +76,7 @@ PRODUCTS_PER_PAGE = 8
 
 MAILBOXLAYER_ACCESS_KEY = os.environ.get(
     "MAILBOXLAYER_ACCESS_KEY",
-    ""
+    "edb349802dd334a9479417e4b16e060a"
 ).strip()
 
 MAILBOXLAYER_URL = (
@@ -88,14 +88,11 @@ MAILBOXLAYER_URL = (
 # RESEND EMAIL CONFIGURATION
 # ============================================================
 
-RESEND_API_KEY = os.environ.get(
-    "RESEND_API_KEY",
-    ""
-).strip()
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
 
 RESEND_FROM_EMAIL = os.environ.get(
     "RESEND_FROM_EMAIL",
-    ""
+    "ojugbelehabeeb06@gmail.com"
 ).strip()
 
 RESEND_FROM_NAME = os.environ.get(
@@ -117,7 +114,7 @@ OTP_EXPIRY_MINUTES = 10
 
 PAYSTACK_SECRET_KEY = os.environ.get(
     "PAYSTACK_SECRET_KEY",
-    ""
+    "sk_test_0d971bb72ebed6d23d0471924df87bd5941db555"
 ).strip()
 
 PAYSTACK_BASE_URL = (

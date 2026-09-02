@@ -1,0 +1,9 @@
+[33mcommit c27c87d98bce957656b234400a0fdad6c12854da[m
+Author: habeeb-develop <ojugbelehabeeb05@gmail.com>
+Date:   Wed Sep 2 01:42:41 2026 +0100
+
+    Replace SMTP email with Resend
+
+ app.py           | 352 [32m++++++++++++++++++++++++++[m[31m-----------------------------[m
+ requirements.txt | Bin [31m574[m -> [32m660[m bytes
+ 2 files changed, 165 insertions(+), 187 deletions(-)

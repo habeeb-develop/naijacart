@@ -13,8 +13,9 @@ import os
 import uuid
 import requests
 import random
-import resend
+import smtplib
 
+from email.message import EmailMessage
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from functools import wraps
@@ -29,24 +30,25 @@ from werkzeug.security import (
 
 
 # ============================================================
-# LOAD ENVIRONMENT VARIABLES
+# APP CONFIGURATION
 # ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent
 
 load_dotenv(BASE_DIR / ".env")
 
-
-# ============================================================
-# APPLICATION
-# ============================================================
-
 app = Flask(__name__)
 
-app.secret_key = os.getenv("SECRET_KEY") or "naijacart-development-key"
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "naijacart-133445n"
+).strip()
 
 if not app.secret_key:
-    raise RuntimeError("SECRET_KEY is missing.")
+    raise RuntimeError(
+        "SECRET_KEY is missing. Add SECRET_KEY to your .env file "
+        "or Railway Variables."
+    )
 
 
 # ============================================================
@@ -54,92 +56,14 @@ if not app.secret_key:
 # ============================================================
 
 DATABASE_DIR = BASE_DIR / "database"
-
-DATABASE_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
+DATABASE_DIR.mkdir(parents=True, exist_ok=True)
 
 DATABASE = DATABASE_DIR / "naijacart.db"
-
-
-# ============================================================
-# PAGINATION
-# ============================================================
 
 PRODUCTS_PER_PAGE = 8
 
 
-# ============================================================
-# MAILBOXLAYER
-# ============================================================
-
-MAILBOXLAYER_ACCESS_KEY = os.environ.get(
-    "MAILBOXLAYER_ACCESS_KEY",
-    "edb349802dd334a9479417e4b16e060a"
-).strip()
-
-MAILBOXLAYER_URL = (
-    "https://apilayer.net/api/check"
-)
-
-
-# ============================================================
-# RESEND EMAIL CONFIGURATION
-# ============================================================
-
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
-
-RESEND_FROM_EMAIL = "onboarding@resend.dev"
-
-print("RESEND_FROM_EMAIL:", RESEND_FROM_EMAIL)
-
-
-RESEND_FROM_NAME = os.environ.get(
-    "RESEND_FROM_NAME",
-    "NaijaCart"
-).strip()
-
-print("RESEND_API_KEY loaded:", bool(RESEND_API_KEY))
-print("RESEND_FROM_EMAIL:", RESEND_FROM_EMAIL)
-print("RESEND_FROM_NAME:", RESEND_FROM_NAME)
-print("TEST_VARIABLE:", os.environ.get("TEST_VARIABLE"))
-
-# ============================================================
-# EMAIL OTP SETTINGS
-# ============================================================
-
-OTP_EXPIRY_MINUTES = 10
-
-
-# ============================================================
-# PAYSTACK CONFIGURATION
-# ============================================================
-
-PAYSTACK_SECRET_KEY = os.environ.get(
-    "PAYSTACK_SECRET_KEY",
-    "sk_test_0d971bb72ebed6d23d0471924df87bd5941db555"
-).strip()
-
-PAYSTACK_BASE_URL = (
-    "https://api.paystack.co"
-)
-
-PAYSTACK_INITIALIZE_URL = (
-    f"{PAYSTACK_BASE_URL}/transaction/initialize"
-)
-
-PAYSTACK_VERIFY_URL = (
-    f"{PAYSTACK_BASE_URL}/transaction/verify"
-)
-
-
-# ============================================================
-# DATABASE CONNECTION
-# ============================================================
-
 def get_db():
-
     conn = sqlite3.connect(
         str(DATABASE),
         timeout=30
@@ -166,357 +90,399 @@ def init_db():
 
     conn = get_db()
 
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            phone TEXT,
-            address TEXT,
-            role TEXT NOT NULL DEFAULT 'customer',
-            email_verified INTEGER NOT NULL DEFAULT 0,
-            verification_code TEXT,
-            verification_expires_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
+    try:
 
-        CREATE TABLE IF NOT EXISTS products (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            category TEXT NOT NULL,
-            price REAL NOT NULL,
-            description TEXT,
-            image TEXT,
-            seller_id INTEGER,
-            stock INTEGER NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (seller_id)
-                REFERENCES users(id)
-                ON DELETE SET NULL
-        );
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                phone TEXT DEFAULT '',
+                address TEXT DEFAULT '',
+                role TEXT NOT NULL DEFAULT 'customer',
+                email_verified INTEGER NOT NULL DEFAULT 0,
+                verification_code TEXT,
+                verification_expires_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            customer_name TEXT,
-            customer_phone TEXT,
-            customer_email TEXT,
-            customer_address TEXT,
-            delivery_address TEXT,
-            subtotal REAL DEFAULT 0,
-            delivery REAL DEFAULT 0,
-            total REAL DEFAULT 0,
-            status TEXT DEFAULT 'Pending',
-            paystack_reference TEXT,
-            payment_status TEXT DEFAULT 'unpaid',
-            paid_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id)
-                REFERENCES users(id)
-                ON DELETE SET NULL
-        );
+            CREATE TABLE IF NOT EXISTS products (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL,
+                price REAL NOT NULL DEFAULT 0,
+                description TEXT DEFAULT '',
+                image TEXT DEFAULT '',
+                seller_id INTEGER,
+                stock INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-        CREATE TABLE IF NOT EXISTS order_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_id INTEGER NOT NULL,
-            product_id INTEGER NOT NULL,
-            product_name TEXT NOT NULL,
-            price REAL NOT NULL,
-            quantity INTEGER NOT NULL,
-            FOREIGN KEY (order_id)
-                REFERENCES orders(id)
-                ON DELETE CASCADE,
-            FOREIGN KEY (product_id)
-                REFERENCES products(id)
-        );
+                FOREIGN KEY (seller_id)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL
+            );
 
-        CREATE TABLE IF NOT EXISTS wishlist (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            product_id INTEGER NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(user_id, product_id),
-            FOREIGN KEY (user_id)
-                REFERENCES users(id)
-                ON DELETE CASCADE,
-            FOREIGN KEY (product_id)
-                REFERENCES products(id)
-                ON DELETE CASCADE
-        );
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-        CREATE TABLE IF NOT EXISTS reviews (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            product_id INTEGER NOT NULL,
-            rating INTEGER NOT NULL CHECK(rating BETWEEN 1 AND 5),
-            title TEXT NOT NULL,
-            comment TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id)
-                REFERENCES users(id)
-                ON DELETE CASCADE,
-            FOREIGN KEY (product_id)
-                REFERENCES products(id)
-                ON DELETE CASCADE
-        );
-    """)
+                user_id INTEGER,
 
-    # ========================================================
-    # USERS MIGRATION
-    # ========================================================
+                customer_name TEXT NOT NULL,
+                customer_phone TEXT NOT NULL,
+                customer_email TEXT NOT NULL,
 
-    user_columns = {
-        row["name"]
-        for row in conn.execute(
-            "PRAGMA table_info(users)"
-        ).fetchall()
-    }
+                customer_address TEXT DEFAULT '',
+                delivery_address TEXT DEFAULT '',
 
-    if "email_verified" not in user_columns:
-        conn.execute("""
-            ALTER TABLE users
-            ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0
+                subtotal REAL NOT NULL DEFAULT 0,
+                delivery REAL NOT NULL DEFAULT 0,
+                total REAL NOT NULL DEFAULT 0,
+
+                status TEXT NOT NULL DEFAULT 'Pending',
+
+                paystack_reference TEXT,
+                payment_status TEXT NOT NULL DEFAULT 'unpaid',
+                payment_method TEXT DEFAULT 'paystack',
+                delivery_method TEXT DEFAULT 'home_delivery',
+
+                paid_at TEXT,
+
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE SET NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                order_id INTEGER NOT NULL,
+                product_id INTEGER,
+
+                product_name TEXT NOT NULL,
+                price REAL NOT NULL,
+                quantity INTEGER NOT NULL,
+
+                FOREIGN KEY (order_id)
+                    REFERENCES orders(id)
+                    ON DELETE CASCADE,
+
+                FOREIGN KEY (product_id)
+                    REFERENCES products(id)
+                    ON DELETE SET NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS wishlist (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                user_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                UNIQUE(user_id, product_id),
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                FOREIGN KEY (product_id)
+                    REFERENCES products(id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS reviews (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+                user_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+
+                rating INTEGER NOT NULL,
+                title TEXT DEFAULT '',
+                comment TEXT DEFAULT '',
+
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (user_id)
+                    REFERENCES users(id)
+                    ON DELETE CASCADE,
+
+                FOREIGN KEY (product_id)
+                    REFERENCES products(id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS
+                idx_orders_paystack_reference
+                ON orders(paystack_reference);
+
+            CREATE INDEX IF NOT EXISTS
+                idx_products_category
+                ON products(category);
+
+            CREATE INDEX IF NOT EXISTS
+                idx_order_items_order_id
+                ON order_items(order_id);
         """)
 
-    if "verification_code" not in user_columns:
+        # ====================================================
+        # USERS MIGRATIONS
+        # ====================================================
+
+        user_columns = {
+            row["name"]
+            for row in conn.execute(
+                "PRAGMA table_info(users)"
+            ).fetchall()
+        }
+
+        user_migrations = {
+
+            "phone": """
+                ALTER TABLE users
+                ADD COLUMN phone TEXT DEFAULT ''
+            """,
+
+            "address": """
+                ALTER TABLE users
+                ADD COLUMN address TEXT DEFAULT ''
+            """,
+
+            "role": """
+                ALTER TABLE users
+                ADD COLUMN role TEXT NOT NULL DEFAULT 'customer'
+            """,
+
+            "email_verified": """
+                ALTER TABLE users
+                ADD COLUMN email_verified
+                INTEGER NOT NULL DEFAULT 0
+            """,
+
+            "verification_code": """
+                ALTER TABLE users
+                ADD COLUMN verification_code TEXT
+            """,
+
+            "verification_expires_at": """
+                ALTER TABLE users
+                ADD COLUMN verification_expires_at TEXT
+            """
+        }
+
+        for column, sql in user_migrations.items():
+
+            if column not in user_columns:
+                conn.execute(sql)
+
+        # ====================================================
+        # ORDERS MIGRATIONS
+        # ====================================================
+
+        order_columns = {
+            row["name"]
+            for row in conn.execute(
+                "PRAGMA table_info(orders)"
+            ).fetchall()
+        }
+
+        order_migrations = {
+
+            "customer_address": """
+                ALTER TABLE orders
+                ADD COLUMN customer_address TEXT DEFAULT ''
+            """,
+
+            "delivery_address": """
+                ALTER TABLE orders
+                ADD COLUMN delivery_address TEXT DEFAULT ''
+            """,
+
+            "subtotal": """
+                ALTER TABLE orders
+                ADD COLUMN subtotal REAL NOT NULL DEFAULT 0
+            """,
+
+            "delivery": """
+                ALTER TABLE orders
+                ADD COLUMN delivery REAL NOT NULL DEFAULT 0
+            """,
+
+            "total": """
+                ALTER TABLE orders
+                ADD COLUMN total REAL NOT NULL DEFAULT 0
+            """,
+
+            "paystack_reference": """
+                ALTER TABLE orders
+                ADD COLUMN paystack_reference TEXT
+            """,
+
+            "payment_status": """
+                ALTER TABLE orders
+                ADD COLUMN payment_status
+                TEXT NOT NULL DEFAULT 'unpaid'
+            """,
+
+            "payment_method": """
+                ALTER TABLE orders
+                ADD COLUMN payment_method
+                TEXT DEFAULT 'paystack'
+            """,
+
+            "delivery_method": """
+                ALTER TABLE orders
+                ADD COLUMN delivery_method
+                TEXT DEFAULT 'home_delivery'
+            """,
+
+            "paid_at": """
+                ALTER TABLE orders
+                ADD COLUMN paid_at TEXT
+            """
+        }
+
+        for column, sql in order_migrations.items():
+
+            if column not in order_columns:
+                conn.execute(sql)
+
         conn.execute("""
-            ALTER TABLE users
-            ADD COLUMN verification_code TEXT
+            UPDATE users
+            SET email_verified = 1
+            WHERE email_verified IS NULL
         """)
 
-    if "verification_expires_at" not in user_columns:
-        conn.execute("""
-            ALTER TABLE users
-            ADD COLUMN verification_expires_at TIMESTAMP
-        """)
+        # ====================================================
+        # ADMIN ACCOUNT
+        # ====================================================
 
-    # ========================================================
-    # ORDERS MIGRATION
-    # ========================================================
+        admin_email = "admin@naijacart.com"
 
-    order_columns = {
-        row["name"]
-        for row in conn.execute(
-            "PRAGMA table_info(orders)"
-        ).fetchall()
-    }
-
-    if "payment_method" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN payment_method TEXT DEFAULT 'paystack'
-        """)
-
-    if "delivery_method" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN delivery_method TEXT DEFAULT 'home_delivery'
-        """)
-
-    if "customer_address" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN customer_address TEXT
-        """)
-
-    if "delivery_address" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN delivery_address TEXT
-        """)
-
-    if "subtotal" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN subtotal REAL DEFAULT 0
-        """)
-
-    if "delivery" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN delivery REAL DEFAULT 0
-        """)
-
-    if "total" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN total REAL DEFAULT 0
-        """)
-
-    if "paystack_reference" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN paystack_reference TEXT
-        """)
-
-    if "payment_status" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN payment_status TEXT DEFAULT 'unpaid'
-        """)
-
-    if "paid_at" not in order_columns:
-        conn.execute("""
-            ALTER TABLE orders
-            ADD COLUMN paid_at TIMESTAMP
-        """)
-
-    conn.execute("""
-        CREATE INDEX IF NOT EXISTS
-        idx_orders_paystack_reference
-        ON orders(paystack_reference)
-    """)
-
-    # ========================================================
-    # OLD NULL EMAIL VERIFICATION VALUES
-    # ========================================================
-
-    conn.execute("""
-        UPDATE users
-        SET email_verified = 1
-        WHERE email_verified IS NULL
-    """)
-
-    # ========================================================
-    # ADMIN ACCOUNT
-    # ========================================================
-
-    admin_email = "admin@naijacart.com"
-
-    admin_password = os.environ.get(
-        "ADMIN_PASSWORD",
-        ""
-    )
-
-    admin = conn.execute(
-        """
-        SELECT id
-        FROM users
-        WHERE LOWER(email) = ?
-        """,
-        (admin_email,)
-    ).fetchone()
-
-    if admin is None:
+        admin_password = os.environ.get(
+            "ADMIN_PASSWORD",
+            "Admin12345"
+        ).strip()
 
         if not admin_password:
-            print(
-                "WARNING: ADMIN_PASSWORD is not configured. "
-                "Admin account will not be created."
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO users
-                (
-                    name,
-                    email,
-                    password,
-                    phone,
-                    address,
-                    role,
-                    email_verified
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    "NaijaCart Administrator",
-                    admin_email,
-                    generate_password_hash(admin_password),
-                    "08000000000",
-                    "Lagos, Nigeria",
-                    "admin",
-                    1
-                )
-            )
+            admin_password = "CHANGE_THIS_ADMIN_PASSWORD"
 
-    else:
-
-        conn.execute(
+        admin = conn.execute(
             """
-            UPDATE users
-            SET
-                role = 'admin',
-                email_verified = 1
-            WHERE LOWER(email) = ?
+            SELECT id
+            FROM users
+            WHERE email = ?
             """,
             (admin_email,)
-        )
+        ).fetchone()
 
-    # ========================================================
-    # DEMO SELLER
-    # ========================================================
+        if not admin:
 
-    seller_email = "seller@naijacart.local"
-
-    seller_password = os.environ.get(
-        "SELLER_PASSWORD",
-        ""
-    )
-
-    seller = conn.execute(
-        """
-        SELECT id
-        FROM users
-        WHERE LOWER(email) = ?
-        """,
-        (seller_email,)
-    ).fetchone()
-
-    if seller is None:
-
-        if not seller_password:
-            print(
-                "WARNING: SELLER_PASSWORD is not configured. "
-                "Seller account will not be created."
-            )
-        else:
-            conn.execute(
-                """
-                INSERT INTO users
-                (
+            conn.execute("""
+                INSERT INTO users (
                     name,
                     email,
                     password,
-                    phone,
-                    address,
                     role,
                     email_verified
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    "NaijaCart Seller",
-                    seller_email,
-                    generate_password_hash(seller_password),
-                    "08000000000",
-                    "Lagos, Nigeria",
-                    "seller",
-                    1
-                )
-            )
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                "NaijaCart Admin",
+                admin_email,
+                generate_password_hash(
+                    admin_password
+                ),
+                "admin",
+                1
+            ))
 
-    else:
+        else:
 
-        conn.execute(
+            conn.execute("""
+                UPDATE users
+                SET
+                    role = 'admin',
+                    email_verified = 1
+                WHERE email = ?
+            """, (admin_email,))
+
+        # ====================================================
+        # DEMO SELLER
+        # ====================================================
+
+        seller_email = "seller@naijacart.local"
+
+        seller_password = os.environ.get(
+            "SELLER_PASSWORD",
+            "Seller12345"
+        ).strip()
+
+        if not seller_password:
+            seller_password = "CHANGE_THIS_SELLER_PASSWORD"
+
+        seller = conn.execute(
             """
-            UPDATE users
-            SET
-                role = 'seller',
-                email_verified = 1
-            WHERE LOWER(email) = ?
+            SELECT id
+            FROM users
+            WHERE email = ?
             """,
             (seller_email,)
-        )
+        ).fetchone()
 
-    conn.commit()
-    conn.close()
+        if not seller:
+
+            conn.execute("""
+                INSERT INTO users (
+                    name,
+                    email,
+                    password,
+                    role,
+                    email_verified
+                )
+                VALUES (?, ?, ?, ?, ?)
+            """, (
+                "NaijaCart Seller",
+                seller_email,
+                generate_password_hash(
+                    seller_password
+                ),
+                "seller",
+                1
+            ))
+
+        else:
+
+            conn.execute("""
+                UPDATE users
+                SET
+                    role = 'seller',
+                    email_verified = 1
+                WHERE email = ?
+            """, (seller_email,))
+
+        conn.commit()
+
+    finally:
+
+        conn.close()
 
 
 # ============================================================
-# MAILBOXLAYER EMAIL VALIDATION
+# MAILBOXLAYER
 # ============================================================
+
+MAILBOXLAYER_ACCESS_KEY = os.environ.get(
+    "MAILBOXLAYER_ACCESS_KEY",
+    "edb349802dd334a9479417e4b16e060a"
+).strip()
+
+MAILBOXLAYER_URL = (
+    "https://apilayer.net/api/check"
+)
+
 
 def validate_email_with_mailboxlayer(email):
 
@@ -525,32 +491,20 @@ def validate_email_with_mailboxlayer(email):
     if not email:
         return False
 
-    if email.count("@") != 1:
+    if "@" not in email:
         return False
 
-    local_part, domain = email.rsplit("@", 1)
+    parts = email.split("@")
 
-    if not local_part:
+    if len(parts) != 2:
         return False
 
-    if not domain:
+    if not parts[0] or "." not in parts[1]:
         return False
 
-    if "." not in domain:
-        return False
-
-    if domain.startswith("."):
-        return False
-
-    if domain.endswith("."):
-        return False
-
+    # If no Mailboxlayer key is configured,
+    # use basic validation rather than blocking registration.
     if not MAILBOXLAYER_ACCESS_KEY:
-
-        print(
-            "WARNING: MAILBOXLAYER_ACCESS_KEY is missing."
-        )
-
         return True
 
     try:
@@ -558,82 +512,116 @@ def validate_email_with_mailboxlayer(email):
         response = requests.get(
             MAILBOXLAYER_URL,
             params={
-                "access_key": MAILBOXLAYER_ACCESS_KEY,
-                "email": email,
-                "smtp": "1",
-                "format": "1"
+                "access_key":
+                    MAILBOXLAYER_ACCESS_KEY,
+
+                "email":
+                    email,
+
+                "smtp":
+                    1,
+
+                "format":
+                    1
             },
-            timeout=15
+            timeout=10
         )
 
-        response.raise_for_status()
-
-        result = response.json()
-
-        if result.get("error"):
-
-            print(
-                "MAILBOXLAYER ERROR:",
-                result["error"]
-            )
-
+        # Fail open if the service itself fails.
+        if not response.ok:
             return True
 
-        format_valid = result.get(
-            "format_valid"
-        )
+        data = response.json()
 
-        mx_found = result.get(
-            "mx_found"
-        )
+        if data.get("format_valid") is False:
+            return False
 
-        if (
-            format_valid is True
-            and mx_found is True
-        ):
-            return True
-
-        if (
-            str(format_valid).lower() == "true"
-            and str(mx_found).lower() == "true"
-        ):
-            return True
-
-        if (
-            str(format_valid) == "1"
-            and str(mx_found) == "1"
-        ):
-            return True
-
-        print(
-            "MAILBOXLAYER INCOMPLETE VALIDATION:",
-            result
-        )
+        if data.get("mx_found") is False:
+            return False
 
         return True
 
-    except requests.RequestException as error:
+    except Exception:
 
-        print(
-            "MAILBOXLAYER CONNECTION ERROR:",
-            error
-        )
-
-        return True
-
-    except Exception as error:
-
-        print(
-            "MAILBOXLAYER ERROR:",
-            error
-        )
-
+        # Mailboxlayer outages should not
+        # prevent registration.
         return True
 
 
 # ============================================================
-# GENERATE 6 DIGIT OTP
+# SMTP CONFIGURATION
 # ============================================================
+
+SMTP_HOST = os.environ.get(
+    "SMTP_HOST",
+    "smtp.gmail.com"
+).strip()
+
+
+try:
+
+    SMTP_PORT = int(
+        os.environ.get(
+            "SMTP_PORT",
+            "587"
+        )
+    )
+
+except ValueError:
+
+    SMTP_PORT = 587
+
+
+SMTP_USERNAME = os.environ.get(
+    "SMTP_USERNAME",
+    "ojugbelehabeeb06@gmail.com"
+).strip()
+
+
+SMTP_PASSWORD = os.environ.get(
+    "SMTP_PASSWORD",
+    "uoyigqqwcpbhtcml"
+).strip()
+
+
+SMTP_FROM_EMAIL = os.environ.get(
+    "SMTP_FROM_EMAIL",
+    SMTP_USERNAME
+).strip()
+
+
+SMTP_FROM_NAME = os.environ.get(
+    "SMTP_FROM_NAME",
+    "NaijaCart"
+).strip()
+
+
+# ============================================================
+# PAYSTACK CONFIGURATION
+# ============================================================
+
+PAYSTACK_SECRET_KEY = os.environ.get(
+    "PAYSTACK_SECRET_KEY",
+    "sk_test_0d971bb72ebed6d23d0471924df87bd5941db555"
+).strip()
+
+
+PAYSTACK_INITIALIZE_URL = (
+    "https://api.paystack.co/transaction/initialize"
+)
+
+
+PAYSTACK_VERIFY_URL = (
+    "https://api.paystack.co/transaction/verify"
+)
+
+
+# ============================================================
+# EMAIL VERIFICATION
+# ============================================================
+
+OTP_EXPIRY_MINUTES = 10
+
 
 def generate_verification_code():
 
@@ -645,32 +633,31 @@ def generate_verification_code():
     )
 
 
-# ============================================================
-# SEND VERIFICATION EMAIL WITH RESEND
-# ============================================================
-
 def send_verification_email(
     recipient_email,
     recipient_name,
     verification_code
 ):
 
-    if not RESEND_API_KEY:
+    if not SMTP_USERNAME:
 
         raise RuntimeError(
-            "RESEND_API_KEY is missing. "
-            "Add RESEND_API_KEY to Railway Variables."
+            "SMTP_USERNAME is missing. "
+            "Add your Gmail address to Railway Variables."
         )
 
-    if not RESEND_FROM_EMAIL:
+    if not SMTP_PASSWORD:
 
         raise RuntimeError(
-            "RESEND_FROM_EMAIL is missing. "
-            "Add your verified Resend sender email "
-            "to Railway Variables."
+            "SMTP_PASSWORD is missing. "
+            "Add your Google App Password to Railway Variables."
         )
 
-    resend.api_key = RESEND_API_KEY
+    if not SMTP_FROM_EMAIL:
+
+        raise RuntimeError(
+            "SMTP_FROM_EMAIL is missing."
+        )
 
     subject = (
         "Your NaijaCart verification code"
@@ -687,7 +674,8 @@ Your 6-digit email verification code is:
 
 This code will expire in {OTP_EXPIRY_MINUTES} minutes.
 
-If you did not create a NaijaCart account, you can ignore this email.
+If you did not create a NaijaCart account,
+you can ignore this email.
 
 Regards,
 NaijaCart Team
@@ -695,47 +683,60 @@ NaijaCart Team
 
     html_content = f"""
 <!DOCTYPE html>
-<html lang="en">
+
+<html>
 
 <head>
-    <meta charset="UTF-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta charset="UTF-8">
 
-    <title>NaijaCart Verification</title>
+<title>NaijaCart Verification</title>
+
 </head>
 
-<body
-    style="
-        margin:0;
-        padding:0;
-        background:#f4f7f6;
-        font-family:Arial,sans-serif;
-    "
->
+<body style="
+    margin:0;
+    padding:0;
+    background:#f4f7f6;
+    font-family:Arial,Helvetica,sans-serif;
+">
 
-    <div
-        style="
-            max-width:600px;
-            margin:40px auto;
-            background:#ffffff;
-            border-radius:16px;
-            padding:35px;
-            box-shadow:0 10px 30px rgba(0,0,0,.08);
-        "
-    >
+<div style="
+    max-width:600px;
+    margin:40px auto;
+    background:white;
+    border-radius:12px;
+    overflow:hidden;
+    box-shadow:0 4px 20px rgba(0,0,0,0.08);
+">
 
-        <h1
-            style="
-                color:#006b57;
-                margin-bottom:10px;
-            "
-        >
+    <div style="
+        background:#006b57;
+        padding:25px;
+        text-align:center;
+        color:white;
+    ">
+
+        <h1 style="
+            margin:0;
+            font-size:28px;
+        ">
             NaijaCart
         </h1>
+
+        <p style="
+            margin:8px 0 0;
+            font-size:14px;
+        ">
+            Everything Nigerian. One Cart.
+        </p>
+
+    </div>
+
+    <div style="
+        padding:35px;
+        color:#333;
+    ">
 
         <h2>
             Verify your email
@@ -747,29 +748,28 @@ NaijaCart Team
 
         <p>
             Thanks for creating your NaijaCart account.
-            Enter the verification code below to confirm
+            Use the verification code below to verify
             your email address.
         </p>
 
-        <div
-            style="
-                margin:30px 0;
-                padding:22px;
-                text-align:center;
-                background:#e8f6f2;
-                border-radius:12px;
-            "
-        >
+        <div style="
+            margin:30px 0;
+            text-align:center;
+        ">
 
-            <div
-                style="
-                    font-size:36px;
-                    font-weight:bold;
-                    letter-spacing:8px;
-                    color:#006b57;
-                "
-            >
+            <div style="
+                display:inline-block;
+                padding:18px 30px;
+                background:#f0f7f5;
+                border-radius:10px;
+                font-size:32px;
+                font-weight:bold;
+                letter-spacing:8px;
+                color:#006b57;
+            ">
+
                 {verification_code}
+
             </div>
 
         </div>
@@ -781,189 +781,249 @@ NaijaCart Team
             </strong>.
         </p>
 
-        <p
-            style="
-                color:#777;
-                font-size:14px;
-            "
-        >
-            If you did not create this account,
+        <p style="color:#777;">
+
+            If you did not create a NaijaCart account,
             you can safely ignore this email.
+
         </p>
 
-        <hr>
+        <p style="margin-top:30px;">
 
-        <p
-            style="
-                color:#777;
-                font-size:13px;
-            "
-        >
-            © NaijaCart
+            Regards,<br>
+
+            <strong>
+                NaijaCart Team
+            </strong>
+
         </p>
 
     </div>
+
+</div>
 
 </body>
 
 </html>
 """
 
+    message = EmailMessage()
+
+    message["Subject"] = subject
+
+    message["From"] = (
+        f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+    )
+
+    message["To"] = recipient_email
+
+    message.set_content(
+        text_content
+    )
+
+    message.add_alternative(
+        html_content,
+        subtype="html"
+    )
+
     try:
 
-        response = resend.Emails.send({
-            "from": f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>",
-            "to": [recipient_email],
-            "subject": subject,
-            "text": text_content,
-            "html": html_content
-        })
+        with smtplib.SMTP(
+            SMTP_HOST,
+            SMTP_PORT,
+            timeout=30
+        ) as server:
+
+            server.ehlo()
+
+            server.starttls()
+
+            server.ehlo()
+
+            server.login(
+                SMTP_USERNAME,
+                SMTP_PASSWORD
+            )
+
+            server.send_message(
+                message
+            )
 
         print(
-            "Verification email sent successfully."
+            "Verification email sent successfully via SMTP."
         )
 
         print(
-            "Resend response:",
-            response
+            "Recipient:",
+            recipient_email
         )
 
-        return response
+        return True
 
-    except Exception as error:
+    except smtplib.SMTPAuthenticationError as error:
 
         print(
-            "RESEND EMAIL ERROR:",
+            "SMTP AUTHENTICATION ERROR:",
             error
         )
 
         raise RuntimeError(
-            f"Resend could not send the verification email: {error}"
+            "Gmail SMTP authentication failed. "
+            "Make sure SMTP_USERNAME is your Gmail address "
+            "and SMTP_PASSWORD is your Google App Password, "
+            "not your normal Gmail password."
         ) from error
 
+    except smtplib.SMTPException as error:
 
-# ============================================================
-# SEND OTP HELPER
-# ============================================================
+        print(
+            "SMTP ERROR:",
+            error
+        )
+
+        raise RuntimeError(
+            f"SMTP could not send the verification email: {error}"
+        ) from error
+
+    except Exception as error:
+
+        print(
+            "EMAIL ERROR:",
+            error
+        )
+
+        raise RuntimeError(
+            f"Could not send verification email: {error}"
+        ) from error
+
 
 def create_and_send_verification_code(user_id):
 
     code = generate_verification_code()
 
-    expires_at = (
+    expires = (
         datetime.utcnow()
         + timedelta(
             minutes=OTP_EXPIRY_MINUTES
         )
-    )
+    ).isoformat()
 
     conn = get_db()
 
-    user = conn.execute(
-        """
-        SELECT
-            id,
-            name,
-            email
-        FROM users
-        WHERE id = ?
-        """,
-        (user_id,)
-    ).fetchone()
-
-    if user is None:
-
-        conn.close()
-
-        raise RuntimeError(
-            "User account could not be found."
-        )
-
-    conn.execute(
-        """
-        UPDATE users
-        SET
-            verification_code = ?,
-            verification_expires_at = ?
-        WHERE id = ?
-        """,
-        (
-            code,
-            expires_at.isoformat(),
-            user_id
-        )
-    )
-
-    conn.commit()
-    conn.close()
-
     try:
 
-        send_verification_email(
-            recipient_email=user["email"],
-            recipient_name=user["name"],
-            verification_code=code
-        )
+        user = conn.execute(
+            """
+            SELECT
+                id,
+                name,
+                email
+            FROM users
+            WHERE id = ?
+            """,
+            (user_id,)
+        ).fetchone()
 
-    except Exception:
+        if not user:
 
-        conn = get_db()
+            raise RuntimeError(
+                "User account not found."
+            )
 
         conn.execute(
             """
             UPDATE users
             SET
-                verification_code = NULL,
-                verification_expires_at = NULL
+                verification_code = ?,
+                verification_expires_at = ?
             WHERE id = ?
             """,
-            (user_id,)
+            (
+                code,
+                expires,
+                user_id
+            )
         )
 
         conn.commit()
+
+    finally:
+
         conn.close()
+
+    try:
+
+        send_verification_email(
+            user["email"],
+            user["name"],
+            code
+        )
+
+    except Exception:
+
+        cleanup_conn = get_db()
+
+        try:
+
+            cleanup_conn.execute(
+                """
+                UPDATE users
+                SET
+                    verification_code = NULL,
+                    verification_expires_at = NULL
+                WHERE id = ?
+                """,
+                (user_id,)
+            )
+
+            cleanup_conn.commit()
+
+        finally:
+
+            cleanup_conn.close()
 
         raise
 
 
 # ============================================================
-# REDIRECT BACK HELPER
+# HELPERS
 # ============================================================
 
 def redirect_back(anchor=None):
 
-    target = request.referrer or url_for("home")
+    destination = (
+        request.referrer
+        or url_for("home")
+    )
 
     if anchor:
 
-        if "#" in target:
-            target = target.split("#", 1)[0]
+        if "#" in destination:
 
-        target = f"{target}#{anchor}"
+            destination = destination.split("#")[0]
 
-    return redirect(target)
+        destination += f"#{anchor}"
+
+    return redirect(destination)
 
 
-# ============================================================
-# LOGIN REQUIRED
-# ============================================================
+def login_required(function):
 
-def login_required(route_function):
-
-    @wraps(route_function)
+    @wraps(function)
     def wrapper(*args, **kwargs):
 
         if not session.get("user_id"):
 
             flash(
-                "Please sign in first."
+                "Please log in to continue.",
+                "warning"
             )
 
             return redirect(
-                url_for("home")
+                url_for("login")
             )
 
-        return route_function(
+        return function(
             *args,
             **kwargs
         )
@@ -971,31 +1031,16 @@ def login_required(route_function):
     return wrapper
 
 
-# ============================================================
-# ADMIN REQUIRED
-# ============================================================
+def admin_required(function):
 
-def admin_required(route_function):
-
-    @wraps(route_function)
+    @wraps(function)
     def wrapper(*args, **kwargs):
 
         user_id = session.get(
             "user_id"
         )
 
-        user_role = session.get(
-            "user_role"
-        )
-
-        if (
-            not user_id
-            or user_role != "admin"
-        ):
-
-            flash(
-                "Please log in as administrator first."
-            )
+        if not user_id:
 
             return redirect(
                 url_for("admin_login")
@@ -1003,31 +1048,40 @@ def admin_required(route_function):
 
         conn = get_db()
 
-        user = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE id = ?
-            AND role = 'admin'
-            """,
-            (user_id,)
-        ).fetchone()
+        try:
 
-        conn.close()
+            user = conn.execute(
+                """
+                SELECT
+                    id,
+                    role
+                FROM users
+                WHERE id = ?
+                """,
+                (user_id,)
+            ).fetchone()
 
-        if user is None:
+        finally:
+
+            conn.close()
+
+        if (
+            not user
+            or user["role"] != "admin"
+        ):
 
             session.clear()
 
             flash(
-                "Administrator account not found."
+                "Admin access required.",
+                "danger"
             )
 
             return redirect(
                 url_for("admin_login")
             )
 
-        return route_function(
+        return function(
             *args,
             **kwargs
         )
@@ -1035,13 +1089,9 @@ def admin_required(route_function):
     return wrapper
 
 
-# ============================================================
-# SELLER REQUIRED
-# ============================================================
+def seller_required(function):
 
-def seller_required(route_function):
-
-    @wraps(route_function)
+    @wraps(function)
     def wrapper(*args, **kwargs):
 
         user_id = session.get(
@@ -1051,48 +1101,51 @@ def seller_required(route_function):
         if not user_id:
 
             flash(
-                "Please log in first."
+                "Please log in.",
+                "warning"
             )
 
             return redirect(
-                url_for("home")
+                url_for("login")
             )
 
         conn = get_db()
 
-        user = conn.execute(
-            """
-            SELECT *
-            FROM users
-            WHERE id = ?
-            """,
-            (user_id,)
-        ).fetchone()
+        try:
 
-        conn.close()
+            user = conn.execute(
+                """
+                SELECT
+                    id,
+                    role
+                FROM users
+                WHERE id = ?
+                """,
+                (user_id,)
+            ).fetchone()
 
-        if user is None:
+        finally:
 
-            session.clear()
+            conn.close()
 
-            return redirect(
-                url_for("home")
+        if (
+            not user
+            or user["role"] not in (
+                "seller",
+                "admin"
             )
-
-        if user["role"] not in (
-            "seller",
-            "admin"
         ):
 
             flash(
-                "You need seller access."
+                "Seller access required.",
+                "danger"
             )
 
             return redirect(
                 url_for("home")
             )
 
-        return route_function(
+        return function(
             *args,
             **kwargs
         )
@@ -1112,10 +1165,6 @@ def current_cart():
 
     return session["cart"]
 
-
-# ============================================================
-# CART ITEMS
-# ============================================================
 
 def cart_items():
 
@@ -1250,7 +1299,9 @@ def inject_cart():
 
     wishlist_count = 0
 
-    user_id = session.get("user_id")
+    user_id = session.get(
+        "user_id"
+    )
 
     if user_id:
 
@@ -1332,7 +1383,8 @@ def home():
     """
 
     count_query = """
-        SELECT COUNT(*) AS total
+        SELECT
+            COUNT(*) AS total
         FROM products
         LEFT JOIN users
             ON products.seller_id = users.id
@@ -1541,7 +1593,9 @@ def register():
             url_for("home")
         )
 
-    if not validate_email_with_mailboxlayer(email):
+    if not validate_email_with_mailboxlayer(
+        email
+    ):
 
         flash(
             "Please enter a valid email address."
@@ -1566,7 +1620,9 @@ def register():
 
         if (
             existing["role"] == "customer"
-            and int(existing["email_verified"] or 0) == 0
+            and int(
+                existing["email_verified"] or 0
+            ) == 0
         ):
 
             conn.close()
@@ -1593,7 +1649,7 @@ def register():
             except Exception as error:
 
                 print(
-                    "RESEND VERIFICATION ERROR:",
+                    "VERIFICATION EMAIL ERROR:",
                     error
                 )
 
@@ -1633,7 +1689,9 @@ def register():
             (
                 name,
                 email,
-                generate_password_hash(password),
+                generate_password_hash(
+                    password
+                ),
                 phone,
                 "customer",
                 0
@@ -1643,6 +1701,7 @@ def register():
         user_id = cursor.lastrowid
 
         conn.commit()
+
         conn.close()
 
         create_and_send_verification_code(
@@ -1668,8 +1727,10 @@ def register():
     except Exception as error:
 
         try:
+
             conn.rollback()
             conn.close()
+
         except Exception:
             pass
 
@@ -1739,7 +1800,9 @@ def verify_email():
             url_for("home")
         )
 
-    if int(user["email_verified"] or 0) == 1:
+    if int(
+        user["email_verified"] or 0
+    ) == 1:
 
         session.pop(
             "verification_user_id",
@@ -1880,17 +1943,17 @@ def verify_email():
 
         session.clear()
 
-        session["user_id"] = (
-            verified_user["id"]
-        )
+        session[
+            "user_id"
+        ] = verified_user["id"]
 
-        session["user_name"] = (
-            verified_user["name"]
-        )
+        session[
+            "user_name"
+        ] = verified_user["name"]
 
-        session["user_role"] = (
-            verified_user["role"]
-        )
+        session[
+            "user_role"
+        ] = verified_user["role"]
 
         flash(
             "Email verified successfully! "
@@ -1959,7 +2022,9 @@ def resend_verification():
             url_for("home")
         )
 
-    if int(user["email_verified"] or 0) == 1:
+    if int(
+        user["email_verified"] or 0
+    ) == 1:
 
         flash(
             "This email is already verified."
@@ -2057,7 +2122,9 @@ def login():
 
     if (
         user["role"] == "customer"
-        and int(user["email_verified"] or 0) != 1
+        and int(
+            user["email_verified"] or 0
+        ) != 1
     ):
 
         session.clear()
@@ -2095,17 +2162,17 @@ def login():
 
     session.clear()
 
-    session["user_id"] = (
-        user["id"]
-    )
+    session[
+        "user_id"
+    ] = user["id"]
 
-    session["user_name"] = (
-        user["name"]
-    )
+    session[
+        "user_name"
+    ] = user["name"]
 
-    session["user_role"] = (
-        user["role"]
-    )
+    session[
+        "user_role"
+    ] = user["role"]
 
     flash(
         f"Welcome, {user['name']}!"
@@ -2256,15 +2323,17 @@ def admin_login():
 
         session.clear()
 
-        session["user_id"] = (
-            user["id"]
-        )
+        session[
+            "user_id"
+        ] = user["id"]
 
-        session["user_name"] = (
-            user["name"]
-        )
+        session[
+            "user_name"
+        ] = user["name"]
 
-        session["user_role"] = "admin"
+        session[
+            "user_role"
+        ] = "admin"
 
         flash(
             "Welcome to the NaijaCart Admin Dashboard."
@@ -2361,7 +2430,8 @@ def admin_dashboard():
 
     total_sales = conn.execute(
         """
-        SELECT COALESCE(SUM(total), 0) AS total
+        SELECT
+            COALESCE(SUM(total), 0) AS total
         FROM orders
         WHERE payment_status = 'paid'
         AND status != 'Cancelled'
@@ -2571,6 +2641,7 @@ def update_order_status(order_id):
     )
 
     conn.commit()
+
     conn.close()
 
     flash(
@@ -2728,6 +2799,7 @@ def admin_products():
         )
 
         conn.commit()
+
         conn.close()
 
         flash(
@@ -2903,6 +2975,7 @@ def edit_product(product_id):
         )
 
         conn.commit()
+
         conn.close()
 
         flash(
@@ -2984,6 +3057,7 @@ def delete_product(product_id):
     )
 
     conn.commit()
+
     conn.close()
 
     flash(
@@ -3399,15 +3473,20 @@ def create_paystack_transaction(
 
     payload = {
         "email": email,
+
         "amount": naira_to_kobo(
             amount
         ),
+
         "currency": "NGN",
+
         "reference": reference,
+
         "callback_url": url_for(
             "paystack_callback",
             _external=True
         ),
+
         "metadata": {
             "order_id": str(
                 order_id
@@ -3601,6 +3680,7 @@ def checkout():
         )
 
         verified_items = []
+
         authoritative_subtotal = 0.0
 
         for item in items:
@@ -3768,15 +3848,19 @@ def checkout():
                 """
                 UPDATE orders
                 SET
-                    status = 'Confirmed - Payment on Delivery',
-                    payment_status = 'pending_cod'
+                    status =
+                        'Confirmed - Payment on Delivery',
+                    payment_status =
+                        'pending_cod'
                 WHERE id = ?
                 """,
                 (order_id,)
             )
 
             conn.commit()
+
             conn.close()
+
             conn = None
 
             session["cart"] = {}
@@ -3807,6 +3891,7 @@ def checkout():
         conn.commit()
 
         conn.close()
+
         conn = None
 
         authorization_url, reference = (
@@ -3836,6 +3921,7 @@ def checkout():
         conn.commit()
 
         conn.close()
+
         conn = None
 
         session[
@@ -3920,6 +4006,7 @@ def checkout():
                 )
 
                 conn2.commit()
+
                 conn2.close()
 
             except Exception as db_error:
@@ -4054,6 +4141,7 @@ def paystack_callback():
         if order is None:
 
             conn.close()
+
             conn = None
 
             flash(
@@ -4072,6 +4160,7 @@ def paystack_callback():
             order_id = order["id"]
 
             conn.close()
+
             conn = None
 
             session["cart"] = {}
@@ -4187,6 +4276,7 @@ def paystack_callback():
         order_id = order["id"]
 
         conn.close()
+
         conn = None
 
         session["cart"] = {}
@@ -4322,7 +4412,9 @@ def wishlist():
     )
 
 
-@app.post("/wishlist/add/<int:product_id>")
+@app.post(
+    "/wishlist/add/<int:product_id>"
+)
 @login_required
 def add_to_wishlist(product_id):
 
@@ -4352,7 +4444,10 @@ def add_to_wishlist(product_id):
     conn.execute(
         """
         INSERT OR IGNORE INTO wishlist
-        (user_id, product_id)
+        (
+            user_id,
+            product_id
+        )
         VALUES (?, ?)
         """,
         (
@@ -4362,6 +4457,7 @@ def add_to_wishlist(product_id):
     )
 
     conn.commit()
+
     conn.close()
 
     flash(
@@ -4373,7 +4469,9 @@ def add_to_wishlist(product_id):
     )
 
 
-@app.post("/wishlist/remove/<int:product_id>")
+@app.post(
+    "/wishlist/remove/<int:product_id>"
+)
 @login_required
 def remove_from_wishlist(product_id):
 
@@ -4392,6 +4490,7 @@ def remove_from_wishlist(product_id):
     )
 
     conn.commit()
+
     conn.close()
 
     flash(
@@ -4403,7 +4502,9 @@ def remove_from_wishlist(product_id):
     )
 
 
-@app.post("/wishlist/toggle/<int:product_id>")
+@app.post(
+    "/wishlist/toggle/<int:product_id>"
+)
 @login_required
 def toggle_wishlist(product_id):
 
@@ -4441,7 +4542,10 @@ def toggle_wishlist(product_id):
         conn.execute(
             """
             INSERT OR IGNORE INTO wishlist
-            (user_id, product_id)
+            (
+                user_id,
+                product_id
+            )
             VALUES (?, ?)
             """,
             (
@@ -4455,6 +4559,7 @@ def toggle_wishlist(product_id):
         )
 
     conn.commit()
+
     conn.close()
 
     flash(message)
@@ -4574,8 +4679,7 @@ def submit_review():
 
     product = conn.execute(
         """
-        SELECT
-            id
+        SELECT id
         FROM products
         WHERE id = ?
         """,
@@ -4815,6 +4919,7 @@ def payment_cancelled(order_id):
     )
 
     conn.commit()
+
     conn.close()
 
     flash(
@@ -4882,24 +4987,34 @@ if __name__ == "__main__":
     )
 
     print()
-    print("RESEND")
+    print("SMTP")
     print("-" * 70)
 
     print(
-        "Resend configured:",
+        "SMTP configured:",
         "YES"
-        if RESEND_API_KEY and RESEND_FROM_EMAIL
+        if SMTP_USERNAME and SMTP_PASSWORD
         else "NO"
     )
 
     print(
-        "Resend From Email:",
-        RESEND_FROM_EMAIL or "NOT SET"
+        "SMTP Host:",
+        SMTP_HOST
     )
 
     print(
-        "Resend From Name:",
-        RESEND_FROM_NAME
+        "SMTP Port:",
+        SMTP_PORT
+    )
+
+    print(
+        "SMTP From Email:",
+        SMTP_FROM_EMAIL or "NOT SET"
+    )
+
+    print(
+        "SMTP From Name:",
+        SMTP_FROM_NAME
     )
 
     print()
@@ -4921,3 +5036,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port
     )
+

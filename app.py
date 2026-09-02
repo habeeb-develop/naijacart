@@ -89,19 +89,19 @@ MAILBOXLAYER_URL = (
 # ============================================================
 
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+
 print("RESEND_API_KEY loaded:", bool(os.environ.get("RESEND_API_KEY")))
 print("TEST_VARIABLE:", os.environ.get("TEST_VARIABLE"))
 
 RESEND_FROM_EMAIL = os.environ.get(
     "RESEND_FROM_EMAIL",
-    "ojugbelehabeeb06@gmail.com"
+    "naijacart.com"
 ).strip()
 
 RESEND_FROM_NAME = os.environ.get(
     "RESEND_FROM_NAME",
     "NaijaCart"
 ).strip()
-
 
 # ============================================================
 # EMAIL OTP SETTINGS

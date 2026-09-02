@@ -13,9 +13,8 @@ import os
 import uuid
 import requests
 import random
-import smtplib
+import resend
 
-from email.message import EmailMessage
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from functools import wraps
@@ -46,12 +45,13 @@ app = Flask(__name__)
 
 app.secret_key = os.environ.get(
     "SECRET_KEY",
-    "naijacart-development-secret-change-this"
+    ""
 ).strip()
 
 if not app.secret_key:
     raise RuntimeError(
-        "SECRET_KEY is missing. Add SECRET_KEY to your .env file."
+        "SECRET_KEY is missing. Add SECRET_KEY to your "
+        "Railway Variables or local .env file."
     )
 
 
@@ -82,7 +82,7 @@ PRODUCTS_PER_PAGE = 8
 
 MAILBOXLAYER_ACCESS_KEY = os.environ.get(
     "MAILBOXLAYER_ACCESS_KEY",
-    "edb349802dd334a9479417e4b16e060a"
+    ""
 ).strip()
 
 MAILBOXLAYER_URL = (
@@ -91,41 +91,21 @@ MAILBOXLAYER_URL = (
 
 
 # ============================================================
-# SMTP CONFIGURATION
+# RESEND EMAIL CONFIGURATION
 # ============================================================
 
-SMTP_HOST = os.environ.get(
-    "SMTP_HOST",
-    "smtp.gmail.com"
+RESEND_API_KEY = os.environ.get(
+    "RESEND_API_KEY",
+    ""
 ).strip()
 
-try:
-    SMTP_PORT = int(
-        os.environ.get(
-            "SMTP_PORT",
-            "587"
-        ).strip()
-    )
-except ValueError:
-    SMTP_PORT = 587
-
-SMTP_USERNAME = os.environ.get(
-    "SMTP_USERNAME",
-    "ojugbelehabeeb06@gmail.com"
+RESEND_FROM_EMAIL = os.environ.get(
+    "RESEND_FROM_EMAIL",
+    ""
 ).strip()
 
-SMTP_PASSWORD = os.environ.get(
-    "SMTP_PASSWORD",
-    "evseiwlkiylaczid"
-).strip()
-
-SMTP_FROM_EMAIL = os.environ.get(
-    "SMTP_FROM_EMAIL",
-    SMTP_USERNAME
-).strip()
-
-SMTP_FROM_NAME = os.environ.get(
-    "SMTP_FROM_NAME",
+RESEND_FROM_NAME = os.environ.get(
+    "RESEND_FROM_NAME",
     "NaijaCart"
 ).strip()
 
@@ -143,7 +123,7 @@ OTP_EXPIRY_MINUTES = 10
 
 PAYSTACK_SECRET_KEY = os.environ.get(
     "PAYSTACK_SECRET_KEY",
-    "sk_test_0d971bb72ebed6d23d0471924df87bd5941db555"
+    ""
 ).strip()
 
 PAYSTACK_BASE_URL = (
@@ -411,7 +391,7 @@ def init_db():
 
     admin_password = os.environ.get(
         "ADMIN_PASSWORD",
-        "Admin12345"
+        ""
     )
 
     admin = conn.execute(
@@ -425,30 +405,36 @@ def init_db():
 
     if admin is None:
 
-        conn.execute(
-            """
-            INSERT INTO users
-            (
-                name,
-                email,
-                password,
-                phone,
-                address,
-                role,
-                email_verified
+        if not admin_password:
+            print(
+                "WARNING: ADMIN_PASSWORD is not configured. "
+                "Admin account will not be created."
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "NaijaCart Administrator",
-                admin_email,
-                generate_password_hash(admin_password),
-                "08000000000",
-                "Lagos, Nigeria",
-                "admin",
-                1
+        else:
+            conn.execute(
+                """
+                INSERT INTO users
+                (
+                    name,
+                    email,
+                    password,
+                    phone,
+                    address,
+                    role,
+                    email_verified
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "NaijaCart Administrator",
+                    admin_email,
+                    generate_password_hash(admin_password),
+                    "08000000000",
+                    "Lagos, Nigeria",
+                    "admin",
+                    1
+                )
             )
-        )
 
     else:
 
@@ -471,7 +457,7 @@ def init_db():
 
     seller_password = os.environ.get(
         "SELLER_PASSWORD",
-        "admin123"
+        ""
     )
 
     seller = conn.execute(
@@ -485,30 +471,36 @@ def init_db():
 
     if seller is None:
 
-        conn.execute(
-            """
-            INSERT INTO users
-            (
-                name,
-                email,
-                password,
-                phone,
-                address,
-                role,
-                email_verified
+        if not seller_password:
+            print(
+                "WARNING: SELLER_PASSWORD is not configured. "
+                "Seller account will not be created."
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                "NaijaCart Seller",
-                seller_email,
-                generate_password_hash(seller_password),
-                "08000000000",
-                "Lagos, Nigeria",
-                "seller",
-                1
+        else:
+            conn.execute(
+                """
+                INSERT INTO users
+                (
+                    name,
+                    email,
+                    password,
+                    phone,
+                    address,
+                    role,
+                    email_verified
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "NaijaCart Seller",
+                    seller_email,
+                    generate_password_hash(seller_password),
+                    "08000000000",
+                    "Lagos, Nigeria",
+                    "seller",
+                    1
+                )
             )
-        )
 
     else:
 
@@ -535,10 +527,6 @@ def validate_email_with_mailboxlayer(email):
 
     email = email.strip().lower()
 
-    # --------------------------------------------------------
-    # BASIC EMAIL VALIDATION
-    # --------------------------------------------------------
-
     if not email:
         return False
 
@@ -562,10 +550,6 @@ def validate_email_with_mailboxlayer(email):
     if domain.endswith("."):
         return False
 
-    # --------------------------------------------------------
-    # MAILBOXLAYER IS OPTIONAL
-    # --------------------------------------------------------
-
     if not MAILBOXLAYER_ACCESS_KEY:
 
         print(
@@ -573,10 +557,6 @@ def validate_email_with_mailboxlayer(email):
         )
 
         return True
-
-    # --------------------------------------------------------
-    # MAILBOXLAYER REQUEST
-    # --------------------------------------------------------
 
     try:
 
@@ -671,7 +651,7 @@ def generate_verification_code():
 
 
 # ============================================================
-# SEND VERIFICATION EMAIL
+# SEND VERIFICATION EMAIL WITH RESEND
 # ============================================================
 
 def send_verification_email(
@@ -680,49 +660,28 @@ def send_verification_email(
     verification_code
 ):
 
-    print()
-    print("=" * 70)
-    print("NAIJACART EMAIL VERIFICATION")
-    print("=" * 70)
-    print("Recipient:", recipient_email)
-    print("SMTP Host:", SMTP_HOST)
-    print("SMTP Port:", SMTP_PORT)
-    print("SMTP Username:", SMTP_USERNAME)
-    print("From Email:", SMTP_FROM_EMAIL)
-    print("=" * 70)
-
-    if not SMTP_USERNAME:
+    if not RESEND_API_KEY:
 
         raise RuntimeError(
-            "SMTP_USERNAME is missing from your .env file."
+            "RESEND_API_KEY is missing. "
+            "Add RESEND_API_KEY to Railway Variables."
         )
 
-    if not SMTP_PASSWORD:
+    if not RESEND_FROM_EMAIL:
 
         raise RuntimeError(
-            "SMTP_PASSWORD is missing from your .env file."
+            "RESEND_FROM_EMAIL is missing. "
+            "Add your verified Resend sender email "
+            "to Railway Variables."
         )
 
-    if not SMTP_FROM_EMAIL:
+    resend.api_key = RESEND_API_KEY
 
-        raise RuntimeError(
-            "SMTP_FROM_EMAIL is missing from your .env file."
-        )
-
-    message = EmailMessage()
-
-    message["Subject"] = (
+    subject = (
         "Your NaijaCart verification code"
     )
 
-    message["From"] = (
-        f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-    )
-
-    message["To"] = recipient_email
-
-    message.set_content(
-        f"""
+    text_content = f"""
 Hello {recipient_name},
 
 Welcome to NaijaCart!
@@ -737,8 +696,7 @@ If you did not create a NaijaCart account, you can ignore this email.
 
 Regards,
 NaijaCart Team
-        """.strip()
-    )
+""".strip()
 
     html_content = f"""
 <!DOCTYPE html>
@@ -856,141 +814,36 @@ NaijaCart Team
 </html>
 """
 
-    message.add_alternative(
-        html_content,
-        subtype="html"
-    )
-
-    # ========================================================
-    # SMTP CONNECTION
-    # ========================================================
-
     try:
 
-        if SMTP_PORT == 465:
-
-            print(
-                "Connecting to SMTP using SSL..."
-            )
-
-            with smtplib.SMTP_SSL(
-                SMTP_HOST,
-                SMTP_PORT,
-                timeout=30
-            ) as smtp:
-
-                smtp.ehlo()
-
-                print(
-                    "SMTP SSL connection established."
-                )
-
-                smtp.login(
-                    SMTP_USERNAME,
-                    SMTP_PASSWORD
-                )
-
-                print(
-                    "SMTP login successful."
-                )
-
-                smtp.send_message(
-                    message
-                )
-
-        else:
-
-            print(
-                "Connecting to SMTP using STARTTLS..."
-            )
-
-            with smtplib.SMTP(
-                SMTP_HOST,
-                SMTP_PORT,
-                timeout=30
-            ) as smtp:
-
-                smtp.ehlo()
-
-                print(
-                    "SMTP connection established."
-                )
-
-                smtp.starttls()
-
-                smtp.ehlo()
-
-                print(
-                    "SMTP STARTTLS successful."
-                )
-
-                smtp.login(
-                    SMTP_USERNAME,
-                    SMTP_PASSWORD
-                )
-
-                print(
-                    "SMTP login successful."
-                )
-
-                smtp.send_message(
-                    message
-                )
+        response = resend.Emails.send({
+            "from": f"{RESEND_FROM_NAME} <{RESEND_FROM_EMAIL}>",
+            "to": [recipient_email],
+            "subject": subject,
+            "text": text_content,
+            "html": html_content
+        })
 
         print(
             "Verification email sent successfully."
         )
 
-        print("=" * 70)
-        print()
-
-    except smtplib.SMTPAuthenticationError as error:
-
-        print()
-        print("=" * 70)
-        print("SMTP AUTHENTICATION ERROR")
-        print("=" * 70)
-        print(error)
-        print()
         print(
-            "For Gmail, SMTP_PASSWORD must be a "
-            "Google App Password, NOT your normal Gmail password."
+            "Resend response:",
+            response
         )
+
+        return response
+
+    except Exception as error:
+
         print(
-            "Make sure 2-Step Verification is enabled "
-            "on the Google account."
+            "RESEND EMAIL ERROR:",
+            error
         )
-        print("=" * 70)
-        print()
 
         raise RuntimeError(
-            "Gmail SMTP authentication failed. "
-            "Use a Google App Password as SMTP_PASSWORD."
-        ) from error
-
-    except smtplib.SMTPConnectError as error:
-
-        raise RuntimeError(
-            f"Could not connect to SMTP server "
-            f"{SMTP_HOST}:{SMTP_PORT}."
-        ) from error
-
-    except smtplib.SMTPServerDisconnected as error:
-
-        raise RuntimeError(
-            "The SMTP server disconnected the connection."
-        ) from error
-
-    except smtplib.SMTPException as error:
-
-        raise RuntimeError(
-            f"SMTP error: {error}"
-        ) from error
-
-    except OSError as error:
-
-        raise RuntimeError(
-            f"SMTP network error: {error}"
+            f"Resend could not send the verification email: {error}"
         ) from error
 
 
@@ -1450,10 +1303,6 @@ def home():
         "newest"
     ).strip()
 
-    # ========================================================
-    # PAGINATION
-    # ========================================================
-
     try:
 
         page = int(
@@ -1477,10 +1326,6 @@ def home():
 
     conn = get_db()
 
-    # ========================================================
-    # PRODUCT QUERY
-    # ========================================================
-
     query = """
         SELECT
             products.*,
@@ -1502,10 +1347,6 @@ def home():
     params = []
     count_params = []
 
-    # ========================================================
-    # CATEGORY FILTER
-    # ========================================================
-
     if category != "all":
 
         query += """
@@ -1518,10 +1359,6 @@ def home():
 
         params.append(category)
         count_params.append(category)
-
-    # ========================================================
-    # SEARCH FILTER
-    # ========================================================
 
     if search:
 
@@ -1555,10 +1392,6 @@ def home():
             search_value
         ])
 
-    # ========================================================
-    # SORTING
-    # ========================================================
-
     if sort == "price-low":
 
         query += """
@@ -1584,18 +1417,10 @@ def home():
             ORDER BY products.id DESC
         """
 
-    # ========================================================
-    # TOTAL PRODUCTS
-    # ========================================================
-
     total_products = conn.execute(
         count_query,
         count_params
     ).fetchone()["total"]
-
-    # ========================================================
-    # TOTAL PAGES
-    # ========================================================
 
     total_pages = max(
         1,
@@ -1610,17 +1435,9 @@ def home():
     if page > total_pages:
         page = total_pages
 
-    # ========================================================
-    # OFFSET
-    # ========================================================
-
     offset = (
         page - 1
     ) * per_page
-
-    # ========================================================
-    # CURRENT PAGE PRODUCTS
-    # ========================================================
 
     query += """
         LIMIT ? OFFSET ?
@@ -1636,10 +1453,6 @@ def home():
         params
     ).fetchall()
 
-    # ========================================================
-    # CATEGORIES
-    # ========================================================
-
     categories = conn.execute(
         """
         SELECT DISTINCT category
@@ -1649,10 +1462,6 @@ def home():
     ).fetchall()
 
     conn.close()
-
-    # ========================================================
-    # PAGINATION DISPLAY INFORMATION
-    # ========================================================
 
     start_product = (
         offset + 1
@@ -1673,8 +1482,6 @@ def home():
         selected_category=category,
         search_query=search,
         selected_sort=sort,
-
-        # Pagination
         page=page,
         current_page=page,
         per_page=per_page,
@@ -3587,7 +3394,7 @@ def create_paystack_transaction(
 
         raise RuntimeError(
             "PAYSTACK_SECRET_KEY is missing. "
-            "Add it to your .env file."
+            "Add it to your Railway Variables."
         )
 
     reference = (
@@ -5037,6 +4844,13 @@ init_db()
 
 if __name__ == "__main__":
 
+    port = int(
+        os.environ.get(
+            "PORT",
+            "5000"
+        )
+    )
+
     print()
     print("=" * 70)
     print("                         NAIJACART")
@@ -5073,86 +4887,32 @@ if __name__ == "__main__":
     )
 
     print()
-    print("SMTP")
+    print("RESEND")
     print("-" * 70)
 
     print(
-        "SMTP configured:",
+        "Resend configured:",
         "YES"
-        if SMTP_USERNAME and SMTP_PASSWORD
+        if RESEND_API_KEY and RESEND_FROM_EMAIL
         else "NO"
     )
 
     print(
-        "SMTP Host:",
-        SMTP_HOST
+        "Resend From Email:",
+        RESEND_FROM_EMAIL or "NOT SET"
     )
 
     print(
-        "SMTP Port:",
-        SMTP_PORT
-    )
-
-    print(
-        "SMTP Username:",
-        SMTP_USERNAME or "NOT SET"
-    )
-
-    print(
-        "SMTP From Email:",
-        SMTP_FROM_EMAIL or "NOT SET"
-    )
-
-    print(
-        "SMTP From Name:",
-        SMTP_FROM_NAME
+        "Resend From Name:",
+        RESEND_FROM_NAME
     )
 
     print()
-    print("=" * 70)
-    print("                           WEBSITE")
-    print("=" * 70)
-
-    print()
-    print(
-        "Local website:"
-    )
+    print("WEBSITE")
+    print("-" * 70)
 
     print(
-        "  http://127.0.0.1:5000"
-    )
-
-    print(
-        "  http://localhost:5000"
-    )
-
-    print()
-    print(
-        "Open this in your browser:"
-    )
-
-    print(
-        "  http://127.0.0.1:5000"
-    )
-
-    print()
-    print("=" * 70)
-    print("                           ADMIN")
-    print("=" * 70)
-
-    print()
-    print(
-        "  http://127.0.0.1:5000/admin/login"
-    )
-
-    print()
-    print("=" * 70)
-    print("                    EMAIL VERIFICATION")
-    print("=" * 70)
-
-    print()
-    print(
-        "  http://127.0.0.1:5000/verify-email"
+        f"Port: {port}"
     )
 
     print()
@@ -5162,8 +4922,7 @@ if __name__ == "__main__":
     print()
 
     app.run(
-        debug=True,
-        host="127.0.0.1",
-        port=5000
+        debug=False,
+        host="0.0.0.0",
+        port=port
     )
-

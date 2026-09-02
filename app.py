@@ -43,16 +43,10 @@ load_dotenv(BASE_DIR / ".env")
 
 app = Flask(__name__)
 
-app.secret_key = os.environ.get(
-    "SECRET_KEY",
-    ""
-).strip()
+app.secret_key = os.getenv("SECRET_KEY") or "naijacart-development-key"
 
 if not app.secret_key:
-    raise RuntimeError(
-        "SECRET_KEY is missing. Add SECRET_KEY to your "
-        "Railway Variables or local .env file."
-    )
+    raise RuntimeError("SECRET_KEY is missing.")
 
 
 # ============================================================

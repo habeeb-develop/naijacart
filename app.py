@@ -13,9 +13,9 @@ import os
 import uuid
 import requests
 import random
+import smtplib
 
-
-import resend
+from email.message import EmailMessage
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from functools import wraps
@@ -124,21 +124,8 @@ SMTP_FROM_EMAIL = os.environ.get(
     SMTP_USERNAME
 ).strip()
 
-# ============================================================
-# RESEND EMAIL CONFIGURATION
-# ============================================================
-
-RESEND_API_KEY = os.environ.get(
-    RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
-).strip()
-
-RESEND_FROM_EMAIL = os.environ.get(
-    "RESEND_FROM_EMAIL",
-    "onboarding@resend.dev"
-).strip()
-
-RESEND_FROM_NAME = os.environ.get(
-    "RESEND_FROM_NAME",
+SMTP_FROM_NAME = os.environ.get(
+    "SMTP_FROM_NAME",
     "NaijaCart"
 ).strip()
 
@@ -687,10 +674,6 @@ def generate_verification_code():
 # SEND VERIFICATION EMAIL
 # ============================================================
 
-# ============================================================
-# SEND VERIFICATION EMAIL WITH RESEND
-# ============================================================
-
 def send_verification_email(
     recipient_email,
     recipient_name,
@@ -702,24 +685,60 @@ def send_verification_email(
     print("NAIJACART EMAIL VERIFICATION")
     print("=" * 70)
     print("Recipient:", recipient_email)
-    print("Email Provider: Resend")
-    print("From Email:", RESEND_FROM_EMAIL)
+    print("SMTP Host:", SMTP_HOST)
+    print("SMTP Port:", SMTP_PORT)
+    print("SMTP Username:", SMTP_USERNAME)
+    print("From Email:", SMTP_FROM_EMAIL)
     print("=" * 70)
 
-    if not RESEND_API_KEY:
+    if not SMTP_USERNAME:
 
         raise RuntimeError(
-            "RESEND_API_KEY is missing. "
-            "Add RESEND_API_KEY to Railway Variables."
+            "SMTP_USERNAME is missing from your .env file."
         )
 
-    if not RESEND_FROM_EMAIL:
+    if not SMTP_PASSWORD:
 
         raise RuntimeError(
-            "RESEND_FROM_EMAIL is missing."
+            "SMTP_PASSWORD is missing from your .env file."
         )
 
-    resend.api_key = RESEND_API_KEY
+    if not SMTP_FROM_EMAIL:
+
+        raise RuntimeError(
+            "SMTP_FROM_EMAIL is missing from your .env file."
+        )
+
+    message = EmailMessage()
+
+    message["Subject"] = (
+        "Your NaijaCart verification code"
+    )
+
+    message["From"] = (
+        f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+    )
+
+    message["To"] = recipient_email
+
+    message.set_content(
+        f"""
+Hello {recipient_name},
+
+Welcome to NaijaCart!
+
+Your 6-digit email verification code is:
+
+{verification_code}
+
+This code will expire in {OTP_EXPIRY_MINUTES} minutes.
+
+If you did not create a NaijaCart account, you can ignore this email.
+
+Regards,
+NaijaCart Team
+        """.strip()
+    )
 
     html_content = f"""
 <!DOCTYPE html>
@@ -837,51 +856,141 @@ def send_verification_email(
 </html>
 """
 
+    message.add_alternative(
+        html_content,
+        subtype="html"
+    )
+
+    # ========================================================
+    # SMTP CONNECTION
+    # ========================================================
+
     try:
 
-        response = resend.Emails.send({
-            "from": (
-                f"{RESEND_FROM_NAME} "
-                f"<{RESEND_FROM_EMAIL}>"
-            ),
+        if SMTP_PORT == 465:
 
-            "to": [
-                recipient_email
-            ],
+            print(
+                "Connecting to SMTP using SSL..."
+            )
 
-            "subject":
-                "Your NaijaCart verification code",
+            with smtplib.SMTP_SSL(
+                SMTP_HOST,
+                SMTP_PORT,
+                timeout=30
+            ) as smtp:
 
-            "html":
-                html_content
-        })
+                smtp.ehlo()
+
+                print(
+                    "SMTP SSL connection established."
+                )
+
+                smtp.login(
+                    SMTP_USERNAME,
+                    SMTP_PASSWORD
+                )
+
+                print(
+                    "SMTP login successful."
+                )
+
+                smtp.send_message(
+                    message
+                )
+
+        else:
+
+            print(
+                "Connecting to SMTP using STARTTLS..."
+            )
+
+            with smtplib.SMTP(
+                SMTP_HOST,
+                SMTP_PORT,
+                timeout=30
+            ) as smtp:
+
+                smtp.ehlo()
+
+                print(
+                    "SMTP connection established."
+                )
+
+                smtp.starttls()
+
+                smtp.ehlo()
+
+                print(
+                    "SMTP STARTTLS successful."
+                )
+
+                smtp.login(
+                    SMTP_USERNAME,
+                    SMTP_PASSWORD
+                )
+
+                print(
+                    "SMTP login successful."
+                )
+
+                smtp.send_message(
+                    message
+                )
 
         print(
             "Verification email sent successfully."
         )
 
-        print(
-            "Resend response:",
-            response
-        )
-
         print("=" * 70)
         print()
 
-        return response
-
-    except Exception as error:
+    except smtplib.SMTPAuthenticationError as error:
 
         print()
         print("=" * 70)
-        print("RESEND EMAIL ERROR")
+        print("SMTP AUTHENTICATION ERROR")
         print("=" * 70)
         print(error)
+        print()
+        print(
+            "For Gmail, SMTP_PASSWORD must be a "
+            "Google App Password, NOT your normal Gmail password."
+        )
+        print(
+            "Make sure 2-Step Verification is enabled "
+            "on the Google account."
+        )
         print("=" * 70)
         print()
 
         raise RuntimeError(
-            f"Could not send verification email: {error}"
+            "Gmail SMTP authentication failed. "
+            "Use a Google App Password as SMTP_PASSWORD."
+        ) from error
+
+    except smtplib.SMTPConnectError as error:
+
+        raise RuntimeError(
+            f"Could not connect to SMTP server "
+            f"{SMTP_HOST}:{SMTP_PORT}."
+        ) from error
+
+    except smtplib.SMTPServerDisconnected as error:
+
+        raise RuntimeError(
+            "The SMTP server disconnected the connection."
+        ) from error
+
+    except smtplib.SMTPException as error:
+
+        raise RuntimeError(
+            f"SMTP error: {error}"
+        ) from error
+
+    except OSError as error:
+
+        raise RuntimeError(
+            f"SMTP network error: {error}"
         ) from error
 
 
@@ -4927,8 +5036,6 @@ init_db()
 # ============================================================
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
 
     print()
     print("=" * 70)
@@ -4966,25 +5073,39 @@ if __name__ == "__main__":
     )
 
     print()
-    print("=" * 70)
-    print("EMAIL")
+    print("SMTP")
     print("-" * 70)
 
     print(
-    "Resend configured:",
-    "YES"
-    if RESEND_API_KEY
-    else "NO"
+        "SMTP configured:",
+        "YES"
+        if SMTP_USERNAME and SMTP_PASSWORD
+        else "NO"
     )
 
     print(
-    "Resend From Email:",
-    RESEND_FROM_EMAIL
+        "SMTP Host:",
+        SMTP_HOST
     )
 
     print(
-    "Resend From Name:",
-    RESEND_FROM_NAME
+        "SMTP Port:",
+        SMTP_PORT
+    )
+
+    print(
+        "SMTP Username:",
+        SMTP_USERNAME or "NOT SET"
+    )
+
+    print(
+        "SMTP From Email:",
+        SMTP_FROM_EMAIL or "NOT SET"
+    )
+
+    print(
+        "SMTP From Name:",
+        SMTP_FROM_NAME
     )
 
     print()
@@ -5040,109 +5161,9 @@ if __name__ == "__main__":
     print("=" * 70)
     print()
 
-    # ============================================================
-# INITIALIZE DATABASE
-# ============================================================
-
-init_db()
-
-
-# ============================================================
-# RUN APPLICATION
-# ============================================================
-
-if __name__ == "__main__":
-
-    port = int(
-        os.environ.get(
-            "PORT",
-            5000
-        )
-    )
-
-    print()
-    print("=" * 70)
-    print("                         NAIJACART")
-    print("=" * 70)
-
-    print()
-    print("DATABASE")
-    print("-" * 70)
-
-    print(
-        f"Database: {DATABASE}"
-    )
-
-    print()
-    print("PAYSTACK")
-    print("-" * 70)
-
-    print(
-        "Paystack configured:",
-        "YES"
-        if PAYSTACK_SECRET_KEY
-        else "NO"
-    )
-
-    print()
-    print("MAILBOXLAYER")
-    print("-" * 70)
-
-    print(
-        "Mailboxlayer configured:",
-        "YES"
-        if MAILBOXLAYER_ACCESS_KEY
-        else "NO"
-    )
-
-    print()
-    print("EMAIL")
-    print("-" * 70)
-
-    print(
-        "Resend configured:",
-        "YES"
-        if RESEND_API_KEY
-        else "NO"
-    )
-
-    print(
-        "Resend From Email:",
-        RESEND_FROM_EMAIL
-    )
-
-    print(
-        "Resend From Name:",
-        RESEND_FROM_NAME
-    )
-
-    print()
-    print("WEBSITE")
-    print("-" * 70)
-
-    print(
-        f"Port: {port}"
-    )
-
-    print(
-        "Admin:",
-        "/admin/login"
-    )
-
-    print(
-        "Verification:",
-        "/verify-email"
-    )
-
-    print()
-    print("=" * 70)
-    print("NaijaCart server is running.")
-    print("=" * 70)
-    print()
-
     app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
+        debug=True,
+        host="127.0.0.1",
+        port=5000
     )
 
